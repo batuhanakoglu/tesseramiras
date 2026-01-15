@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSite } from '../context/SiteContext';
 import { AdminTab, Post, Message, Announcement } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
-import { generateArchaeologicalInsight } from '../services/geminiService';
 
 export const Admin: React.FC = () => {
   const { 
