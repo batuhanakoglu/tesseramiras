@@ -21,11 +21,17 @@ interface SiteContextType {
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
 
+// Helper for robust Base64 encoding (supports Unicode)
+const toBase64 = (str: string) => {
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+    return String.fromCharCode(parseInt(p1, 16));
+  }));
+};
+
 export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<SiteConfig>(() => {
     const saved = localStorage.getItem('tessera_v2_config');
     const parsed = saved ? JSON.parse(saved) : INITIAL_CONFIG;
-    // Geçmiş verilerde announcement dizisi yoksa ekle
     if (!parsed.announcements) parsed.announcements = INITIAL_CONFIG.announcements;
     return parsed;
   });
@@ -100,9 +106,9 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const uploadImageToGitHub = useCallback(async (file: File): Promise<string> => {
-    if (!config.githubToken || !config.githubRepo || !config.githubUsername) {
-      throw new Error('GitHub Ayarları Eksik (Token, Repo veya Kullanıcı Adı)');
-    }
+    if (!config.githubToken) throw new Error('GitHub Token Eksik (Personal Access Token)');
+    if (!config.githubRepo) throw new Error('GitHub Repo Adı Eksik');
+    if (!config.githubUsername) throw new Error('GitHub Kullanıcı Adı Eksik');
 
     const reader = new FileReader();
     const base64Promise = new Promise<string>((resolve) => {
@@ -124,18 +130,24 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: JSON.stringify({
         message: `Tessera: Media Upload - ${fileName}`,
         content: base64Content,
-        committer: { name: config.authorName || config.githubUsername, email: config.githubEmail || 'noreply@github.com' }
+        committer: { 
+          name: config.authorName || config.githubUsername, 
+          email: config.githubEmail || 'noreply@github.com' 
+        }
       }),
     });
 
-    if (!response.ok) throw new Error('GitHub Görsel Yükleme Başarısız');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Görsel Yükleme Hatası: ${errorData.message}`);
+    }
     return `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/${path}`;
   }, [config]);
 
   const saveToGitHub = useCallback(async () => {
-    if (!config.githubToken || !config.githubRepo || !config.githubUsername) {
-      throw new Error('GitHub Ayarları Eksik');
-    }
+    if (!config.githubToken) throw new Error('GitHub Token girilmemiş. Lütfen ROOT_CONFIG sekmesinden PAT token ekleyin.');
+    if (!config.githubRepo) throw new Error('Hedef Depo (Repo) ismi belirtilmemiş.');
+    if (!config.githubUsername) throw new Error('GitHub Kullanıcı Adı belirtilmemiş.');
 
     const path = 'data/config.json';
     const url = `https://api.github.com/repos/${config.githubUsername}/${config.githubRepo}/contents/${path}`;
@@ -150,10 +162,12 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sha = fileData.sha;
       }
     } catch (e) {
-      console.log("Dosya henüz yok, yeni oluşturulacak.");
+      console.log("Mevcut dosya bulunamadı, yeni oluşturuluyor...");
     }
 
-    const jsonContent = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
+    // Use robust Base64 encoding for the entire config JSON
+    const jsonString = JSON.stringify(config, null, 2);
+    const jsonContent = toBase64(jsonString);
     
     const response = await fetch(url, {
       method: 'PUT',
@@ -165,15 +179,35 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message: 'Tessera: Global Site Update',
         content: jsonContent,
         sha: sha || undefined,
-        committer: { name: config.authorName, email: config.githubEmail || 'noreply@github.com' }
+        committer: { 
+          name: config.authorName || config.githubUsername, 
+          email: config.githubEmail || 'noreply@github.com' 
+        }
       }),
     });
 
-    if (!response.ok) throw new Error('Veriler GitHub üzerinde güncellenemedi.');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`GitHub PUSH Hatası: ${errorData.message}`);
+    }
   }, [config]);
 
   return (
-    <SiteContext.Provider value={{ config, updateConfig, addPost, updatePost, deletePost, addAnnouncement, updateAnnouncement, deleteAnnouncement, addMessage, deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub }}>
+    <SiteContext.Provider value={{ 
+      config, 
+      updateConfig, 
+      addPost, 
+      updatePost, 
+      deletePost, 
+      addAnnouncement, 
+      updateAnnouncement, 
+      deleteAnnouncement, 
+      addMessage, 
+      deleteMessage, 
+      markAsRead, 
+      saveToGitHub, 
+      uploadImageToGitHub 
+    }}>
       {children}
     </SiteContext.Provider>
   );
