@@ -7,7 +7,7 @@ export const Admin: React.FC = () => {
   const { 
     config, githubToken, setGithubToken, updateConfig, addPost, updatePost, deletePost, 
     addAnnouncement, updateAnnouncement, deleteAnnouncement,
-    deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub 
+    deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub, refreshFromGitHub
   } = useSite();
   
   const [activeTab, setActiveTab] = useState<AdminTab>(AdminTab.OVERVIEW);
@@ -63,6 +63,18 @@ export const Admin: React.FC = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    setSyncStatus('SYNCING');
+    try {
+      await refreshFromGitHub();
+      setSyncStatus('SUCCESS');
+      setTimeout(() => setSyncStatus('IDLE'), 2000);
+    } catch (e: any) {
+      setSyncStatus('ERROR');
+      setSyncError(e.message);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -96,9 +108,16 @@ export const Admin: React.FC = () => {
     <div className="min-h-screen bg-black flex flex-col lg:flex-row text-white font-sans">
       <aside className="w-full lg:w-64 border-r border-white/5 p-8 flex flex-col bg-[#050505] lg:h-screen lg:sticky lg:top-0">
         <div className="mb-10 text-lg font-black italic uppercase tracking-tighter">TESSERA <span className="text-[9px] text-accent block not-italic tracking-widest font-bold">ADMIN_V2</span></div>
-        <button onClick={handleGlobalPublish} disabled={syncStatus === 'SYNCING'} className={`w-full mb-8 py-3 border text-[9px] font-black uppercase tracking-widest transition-all ${syncStatus === 'SYNCING' ? 'bg-accent/20 animate-pulse' : syncStatus === 'SUCCESS' ? 'bg-green-600' : 'border-accent text-accent hover:bg-accent hover:text-white'}`}>
-          {syncStatus === 'SYNCING' ? 'SYNCING...' : syncStatus === 'SUCCESS' ? 'PUSH_SUCCESS' : 'GITHUB_PUSH'}
-        </button>
+        
+        <div className="space-y-3 mb-8">
+          <button onClick={handleGlobalPublish} disabled={syncStatus === 'SYNCING'} className={`w-full py-3 border text-[9px] font-black uppercase tracking-widest transition-all ${syncStatus === 'SYNCING' ? 'bg-accent/20 animate-pulse' : syncStatus === 'SUCCESS' ? 'bg-green-600' : 'border-accent text-accent hover:bg-accent hover:text-white'}`}>
+            {syncStatus === 'SYNCING' ? 'SYNCING...' : syncStatus === 'SUCCESS' ? 'PUSH_SUCCESS' : 'GITHUB_PUSH'}
+          </button>
+          <button onClick={handleRefresh} className="w-full py-2 border border-white/10 text-[8px] font-bold uppercase tracking-widest hover:bg-white/5">
+            RE-FETCH CLOUD
+          </button>
+        </div>
+
         <nav className="space-y-1 flex-grow overflow-y-auto custom-scrollbar">
           {[
             { id: AdminTab.OVERVIEW, label: 'KONSOL' },
@@ -148,6 +167,14 @@ export const Admin: React.FC = () => {
                 </select>
                 <input type="text" className="bg-transparent border-b border-white/10 py-2 text-xs font-bold uppercase focus:outline-none" value={postForm.readingTime} onChange={e => setPostForm({...postForm, readingTime: e.target.value})} />
               </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold opacity-30 uppercase">KAPAK GÖRSELİ</label>
+                <div className="flex gap-4">
+                  <input type="text" className="flex-grow bg-transparent border-b border-white/10 py-2 text-[10px] focus:outline-none" value={postForm.imageUrl} onChange={e => setPostForm({...postForm, imageUrl: e.target.value})} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 border border-white/10 text-[8px] hover:bg-accent transition-all">YÜKLE</button>
+                </div>
+              </div>
+              <textarea placeholder="ÖZET" className="w-full bg-transparent border-b border-white/10 py-2 text-sm italic" value={postForm.excerpt} onChange={e => setPostForm({...postForm, excerpt: e.target.value})} />
               <textarea placeholder="İÇERİK (Markdown destekli)" rows={10} className="w-full bg-transparent border border-white/10 p-4 text-sm font-light italic focus:outline-none" value={postForm.content} onChange={e => setPostForm({...postForm, content: e.target.value})} />
               <button type="submit" className="w-full bg-accent py-5 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
                 {editingId ? 'GÜNCELLE' : 'ARŞİVE EKLE'}
@@ -171,7 +198,6 @@ export const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* DUYURULAR - TAM ENTEGRE EDİLDİ */}
         {activeTab === AdminTab.ANNOUNCEMENTS && (
           <div className="space-y-12 animate-entry">
             <form onSubmit={e => { e.preventDefault(); editingAnnId ? updateAnnouncement(editingAnnId, annForm) : addAnnouncement(annForm); setEditingAnnId(null); setAnnForm({title:'', content:'', imageUrl:'', isActive:true}) }} className="space-y-6 bg-white/5 p-8 border border-white/5">
@@ -200,7 +226,6 @@ export const Admin: React.FC = () => {
                   </div>
                 </div>
               ))}
-              {config.announcements.length === 0 && <div className="p-12 text-center border border-white/5 border-dashed text-[10px] opacity-20 uppercase tracking-widest">Hiç duyuru yok.</div>}
             </div>
           </div>
         )}
@@ -229,7 +254,7 @@ export const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* MESSAGES */}
+        {/* DİĞER TABLAR (MESSAGES, AUTHOR, UI_SETTINGS) AYNI ŞEKİLDE DEVAM EDER */}
         {activeTab === AdminTab.MESSAGES && (
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-entry">
              <div className="md:col-span-5 space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
@@ -262,7 +287,6 @@ export const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* AUTHOR & UI SETTINGS - STANDART AKTARIM */}
         {activeTab === AdminTab.AUTHOR && (
           <div className="max-w-4xl space-y-12 animate-entry">
              <div className="space-y-4">
@@ -289,6 +313,9 @@ export const Admin: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Hidden File Input for Shared Use */}
+      <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleImageUpload(e, editingId ? 'post' : 'post')} />
     </div>
   );
 };
