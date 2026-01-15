@@ -1,199 +1,119 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useSite } from '../context/SiteContext';
-import { AdminTab, Post, Message, Announcement } from '../types';
-import { Link, useNavigate } from 'react-router-dom';
 
-export const Admin: React.FC = () => {
-  const { 
-    config, githubToken, setGithubToken, updateConfig, addPost, updatePost, deletePost, 
-    addAnnouncement, updateAnnouncement, deleteAnnouncement,
-    deleteMessage, markAsRead, saveToGitHub, refreshFromGitHub, uploadImageToGitHub
-  } = useSite();
-  
-  const [activeTab, setActiveTab] = useState<AdminTab>(AdminTab.OVERVIEW);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [syncStatus, setSyncStatus] = useState<'IDLE' | 'SYNCING' | 'SUCCESS' | 'ERROR'>('IDLE');
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const navigate = useNavigate();
+export const ContactForm: React.FC = () => {
+  const { config, addMessage } = useSite();
+  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [postForm, setPostForm] = useState<Omit<Post, 'id' | 'date'>>({
-    title: '', excerpt: '', content: '', imageUrl: '', category: 'ARKEOLOJİ', readingTime: '5 DK'
-  });
-
-  const [editingAnnId, setEditingAnnId] = useState<string | null>(null);
-  const [annForm, setAnnForm] = useState<Omit<Announcement, 'id' | 'date'>>({
-    title: '', content: '', imageUrl: '', isActive: true
-  });
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  useEffect(() => {
-    if (sessionStorage.getItem('tessera_auth') === 'true') setIsAuthenticated(true);
-  }, []);
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === '1196559621') {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('tessera_auth', 'true');
-    } else {
-      alert('ERİŞİM REDDEDİLDİ');
-      setPasswordInput('');
-    }
-  };
+    setIsSubmitting(true);
+    
+    // 1. Yerel Veritabanına Kaydet (Opsiyonel: Gönderen kişinin kendi tarayıcısında kalır)
+    addMessage({
+      senderName: formData.name,
+      senderEmail: formData.email,
+      subject: formData.subject,
+      body: formData.message
+    });
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('tessera_auth');
-    setIsAuthenticated(false);
-    navigate('/');
-  };
-
-  const handleGlobalPublish = async () => {
-    setSyncStatus('SYNCING');
-    setSyncError(null);
-    try {
-      await saveToGitHub();
-      setSyncStatus('SUCCESS');
-      setTimeout(() => setSyncStatus('IDLE'), 3000);
-    } catch (error: any) {
-      setSyncStatus('ERROR');
-      setSyncError(error.message);
-    }
-  };
-
-  const handleReply = (msg: Message) => {
-    const subject = encodeURIComponent(`Re: ${msg.subject}`);
-    const body = encodeURIComponent(`\n\n--- Orijinal Mesaj ---\nKimden: ${msg.senderName}\nTarih: ${msg.receivedAt}\nMesaj: ${msg.body}`);
-    window.location.href = `mailto:${msg.senderEmail}?subject=${subject}&body=${body}`;
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white selection:bg-accent">
-        <div className="max-w-md w-full border border-accent/20 p-12 bg-accent/5 backdrop-blur-sm animate-entry">
-          <h1 className="text-xl font-black mb-8 text-accent text-center uppercase tracking-tighter">TESSERA_CORE_ACCESS</h1>
-          <form onSubmit={handleLogin} className="space-y-6">
-            <input 
-              type="password" 
-              placeholder="PASSKEY" 
-              className="w-full bg-black/50 border border-white/10 p-4 text-center focus:outline-none focus:border-accent tracking-[0.5em]" 
-              value={passwordInput} 
-              onChange={e => setPasswordInput(e.target.value)} 
-              autoFocus 
-            />
-            <button type="submit" className="w-full bg-accent py-4 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">EXECUTE_LOGIN</button>
-          </form>
-          <div className="mt-8 text-center"><Link to="/" className="text-[8px] opacity-20 uppercase tracking-widest">Giriş Vazgeç</Link></div>
-        </div>
-      </div>
+    // 2. Mailto Protokolü (Gerçek iletişim: Sahibine ulaşması için en güvenli statik yol)
+    // Mesajın size ulaşması için config içindeki githubEmail kullanılır.
+    const recipient = config.githubEmail || 'batuhanakoglu@gmail.com'; // Yedek adres
+    const mailSubject = encodeURIComponent(`Tessera Arşiv İletisi: ${formData.subject}`);
+    const mailBody = encodeURIComponent(
+      `GÖNDEREN: ${formData.name}\n` +
+      `E-POSTA: ${formData.email}\n` +
+      `------------------------------------------\n\n` +
+      `${formData.message}`
     );
-  }
+    
+    // Küçük bir gecikme ile mail uygulamasını tetikle
+    setTimeout(() => {
+      window.location.href = `mailto:${recipient}?subject=${mailSubject}&body=${mailBody}`;
+      setIsSubmitting(false);
+      setSubmitted(true);
+      setFormData({ name: '', email: '', subject: '', message: '' });
+      
+      // Başarı mesajını 5 saniye sonra kapat
+      setTimeout(() => setSubmitted(false), 5000);
+    }, 800);
+  };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col lg:flex-row text-white font-sans selection:bg-accent">
-      <aside className="w-full lg:w-64 border-r border-white/5 p-8 flex flex-col bg-[#050505] lg:h-screen lg:sticky lg:top-0 z-50">
-        <div className="mb-10 text-lg font-black italic uppercase tracking-tighter">TESSERA <span className="text-[9px] text-accent block not-italic tracking-widest font-bold">ADMIN_V2.6</span></div>
-        <div className="space-y-3 mb-8">
-          <button onClick={handleGlobalPublish} disabled={syncStatus === 'SYNCING'} className={`w-full py-3 border text-[9px] font-black uppercase tracking-widest transition-all ${syncStatus === 'SYNCING' ? 'bg-accent/20 animate-pulse' : syncStatus === 'SUCCESS' ? 'bg-green-600' : 'border-accent text-accent hover:bg-accent hover:text-white'}`}>
-            {syncStatus === 'SYNCING' ? 'SYNCING...' : syncStatus === 'SUCCESS' ? 'PUSH_SUCCESS' : 'GITHUB_PUSH'}
+    <div className="w-full">
+      {submitted ? (
+        <div className="border border-accent p-12 text-center space-y-6 bg-accent/5 animate-entry">
+          <div className="text-mono text-[10px] font-black tracking-[0.5em] text-accent uppercase">SUCCESS // TRANSMITTED</div>
+          <p className="text-2xl font-black uppercase tracking-tighter italic">İleti Hazırlandı.</p>
+          <p className="text-[10px] opacity-40 uppercase max-w-xs mx-auto leading-relaxed">
+            Lütfen açılan e-posta istemciniz üzerinden "Gönder" butonuna basarak iletimi tamamlayınız.
+          </p>
+          <button 
+            onClick={() => setSubmitted(false)}
+            className="text-[9px] font-bold text-accent uppercase tracking-widest border-b border-accent/20 hover:border-accent"
+          >
+            YENİ FORM OLUŞTUR
           </button>
-          <button onClick={() => refreshFromGitHub()} className="w-full py-2 border border-white/10 text-[8px] font-bold uppercase tracking-widest hover:bg-white/5">RE-FETCH CLOUD</button>
         </div>
-        <nav className="space-y-1 flex-grow overflow-y-auto custom-scrollbar">
-          {[
-            { id: AdminTab.OVERVIEW, label: 'KONSOL' },
-            { id: AdminTab.POSTS, label: 'ARŞİV YÖNETİMİ' },
-            { id: AdminTab.ANNOUNCEMENTS, label: 'DUYURULAR' },
-            { id: AdminTab.MESSAGES, label: 'İLETİLER' },
-            { id: AdminTab.AUTHOR, label: 'MÜELLİF' },
-            { id: AdminTab.UI_SETTINGS, label: 'SİSTEM AYARLARI' },
-            { id: AdminTab.GITHUB, label: 'ROOT_CONFIG' },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as AdminTab)} className={`w-full text-left px-4 py-3 text-[9px] font-bold uppercase border-l-2 transition-all ${activeTab === tab.id ? 'bg-accent/10 text-accent border-accent' : 'text-gray-500 border-transparent hover:text-white'}`}>
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-        <div className="pt-8 mt-8 border-t border-white/5 space-y-4">
-          <Link to="/" className="block text-[9px] opacity-30 hover:opacity-100 uppercase no-underline tracking-widest">SİTEYE DÖN</Link>
-          <button onClick={handleLogout} className="text-[9px] text-red-900 hover:text-red-500 font-black uppercase tracking-widest">ÇIKIŞ YAP</button>
-        </div>
-      </aside>
-
-      <main className="flex-grow p-6 md:p-12 overflow-y-auto max-w-6xl mx-auto w-full relative">
-        {syncError && <div className="mb-8 p-4 bg-red-900/20 border border-red-900 text-red-500 text-[10px] uppercase font-mono animate-entry">HATA: {syncError}</div>}
-
-        {activeTab === AdminTab.OVERVIEW && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-entry">
-            <div className="bg-white/5 p-8 border border-white/5">
-              <span className="text-[9px] text-accent font-bold block mb-4 uppercase">LOGS_COUNT</span>
-              <div className="text-5xl font-black">{config.posts.length}</div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-8 animate-entry">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="group space-y-2">
+              <label className="text-mono text-[9px] text-accent font-bold uppercase tracking-widest">GÖNDERİCİ_AD</label>
+              <input 
+                type="text" 
+                required 
+                className="w-full bg-transparent border-b border-white/10 py-3 focus:outline-none focus:border-accent transition-all text-xs font-bold uppercase" 
+                value={formData.name} 
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+              />
             </div>
-            <div className="bg-white/5 p-8 border border-white/5">
-              <span className="text-[9px] text-accent font-bold block mb-4 uppercase">INBOX_MSGS</span>
-              <div className="text-5xl font-black">{config.messages.length}</div>
-            </div>
-            <div className="bg-white/5 p-8 border border-white/5">
-              <span className="text-[9px] text-accent font-bold block mb-4 uppercase">ACTIVE_NEWS</span>
-              <div className="text-5xl font-black">{config.announcements.length}</div>
+            <div className="group space-y-2">
+              <label className="text-mono text-[9px] text-accent font-bold uppercase tracking-widest">İLETİŞİM_ADRESİ</label>
+              <input 
+                type="email" 
+                required 
+                className="w-full bg-transparent border-b border-white/10 py-3 focus:outline-none focus:border-accent transition-all text-xs font-bold" 
+                value={formData.email} 
+                onChange={e => setFormData({...formData, email: e.target.value})} 
+              />
             </div>
           </div>
-        )}
-
-        {/* POSTS, ANNOUNCEMENTS vb. sekmeler buraya gelecek... */}
-        {/* MESSAGES SEKMESİ (GÜNCELLENDİ) */}
-        {activeTab === AdminTab.MESSAGES && (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-entry">
-             <div className="md:col-span-5 space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                {config.messages.length > 0 ? config.messages.map(m => (
-                  <button key={m.id} onClick={() => {setSelectedMessage(m); markAsRead(m.id)}} className={`w-full text-left p-6 border transition-all ${selectedMessage?.id === m.id ? 'border-accent bg-accent/5' : 'border-white/5 bg-white/5 hover:border-white/20'} ${!m.read ? 'border-l-4 border-l-accent' : ''}`}>
-                    <div className="text-xs font-black uppercase truncate">{m.subject}</div>
-                    <div className="flex justify-between mt-1">
-                      <span className="text-[9px] text-accent uppercase font-bold">{m.senderName}</span>
-                      <span className="text-[8px] opacity-20">{m.receivedAt}</span>
-                    </div>
-                  </button>
-                )) : <div className="p-12 text-center border border-white/5 border-dashed opacity-20 uppercase text-[9px]">Kutu Boş</div>}
-             </div>
-             <div className="md:col-span-7 bg-white/5 border border-white/5 p-8 flex flex-col min-h-[400px]">
-                {selectedMessage ? (
-                  <div className="animate-entry h-full flex flex-col">
-                    <div className="flex justify-between items-baseline border-b border-white/10 pb-4 mb-6">
-                      <h4 className="text-xl font-black italic uppercase">{selectedMessage.subject}</h4>
-                      <div className="flex gap-4">
-                        <button onClick={() => handleReply(selectedMessage)} className="bg-accent px-4 py-2 text-[9px] font-black uppercase hover:bg-white hover:text-black transition-all">CEVAPLA</button>
-                        <button onClick={() => { if(confirm('Silinsin mi?')) { deleteMessage(selectedMessage.id); setSelectedMessage(null); } }} className="text-red-900 text-[9px] font-black uppercase">SİL</button>
-                      </div>
-                    </div>
-                    <p className="text-xs font-mono mb-6 text-accent">GÖNDEREN: {selectedMessage.senderName} ({selectedMessage.senderEmail})</p>
-                    <p className="text-sm italic font-light text-white/70 leading-relaxed whitespace-pre-wrap flex-grow">{selectedMessage.body}</p>
-                  </div>
-                ) : <div className="m-auto opacity-10 uppercase text-[9px]">Bir İleti Seçin</div>}
-             </div>
+          <div className="group space-y-2">
+            <label className="text-mono text-[9px] text-accent font-bold uppercase tracking-widest">KONU_BAŞLIĞI</label>
+            <input 
+              type="text" 
+              required 
+              className="w-full bg-transparent border-b border-white/10 py-3 focus:outline-none focus:border-accent transition-all text-xs font-bold uppercase" 
+              value={formData.subject} 
+              onChange={e => setFormData({...formData, subject: e.target.value})} 
+            />
           </div>
-        )}
-
-        {/* GITHUB AYARLARI */}
-        {activeTab === AdminTab.GITHUB && (
-          <div className="max-w-2xl space-y-8 animate-entry">
-            <div className={`p-8 border ${githubToken ? 'border-accent/20 bg-accent/5' : 'border-red-900/40 bg-red-900/5'}`}>
-              <h3 className="text-[10px] font-black uppercase tracking-widest mb-6 text-accent italic">ROOT_CONFIG // GITHUB_SYNC</h3>
-              <div className="space-y-6">
-                <div><label className="text-[9px] opacity-40 block mb-2 uppercase">GITHUB_USERNAME</label><input className="w-full bg-black border border-white/10 p-3 text-xs uppercase outline-none" value={config.githubUsername} onChange={e => updateConfig({githubUsername: e.target.value.trim()})} /></div>
-                <div><label className="text-[9px] opacity-40 block mb-2 uppercase">REPO_NAME</label><input className="w-full bg-black border border-white/10 p-3 text-xs uppercase outline-none" value={config.githubRepo} onChange={e => updateConfig({githubRepo: e.target.value.trim()})} /></div>
-                <div className="pt-4 border-t border-white/5">
-                  <label className="text-[9px] text-red-500 font-black block mb-2 uppercase italic">PERSONAL_ACCESS_TOKEN (PAT)</label>
-                  <input type="password" placeholder="ghp_xxxxxxxxxxxx" className="w-full bg-black border border-red-900/30 p-3 text-xs outline-none" value={githubToken} onChange={e => setGithubToken(e.target.value.trim())} />
-                  <p className="mt-2 text-[8px] text-white/30 italic">Token güvenliğiniz için asla repo'ya kaydedilmez.</p>
-                </div>
-              </div>
+          <div className="group space-y-2">
+            <label className="text-mono text-[9px] text-accent font-bold uppercase tracking-widest">İLETİ_İÇERİĞİ</label>
+            <textarea 
+              required 
+              rows={4} 
+              className="w-full bg-transparent border border-white/10 p-4 focus:outline-none focus:border-accent transition-all text-xs leading-relaxed italic" 
+              value={formData.message} 
+              onChange={e => setFormData({...formData, message: e.target.value})} 
+            />
+          </div>
+          <button 
+            type="submit" 
+            disabled={isSubmitting} 
+            className="group relative w-full border border-accent text-accent font-black py-5 overflow-hidden transition-all hover:text-white"
+          >
+            <div className="relative z-10 flex items-center justify-center gap-4 text-[10px] tracking-[0.4em] uppercase">
+              {isSubmitting ? 'PREPARING_PACKET...' : 'EXECUTE_SEND_PROTOCOL →'}
             </div>
-          </div>
-        )}
-      </main>
+            <div className="absolute inset-0 bg-accent translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+          </button>
+        </form>
+      )}
     </div>
   );
 };
