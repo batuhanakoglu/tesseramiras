@@ -88,7 +88,7 @@ export const Admin: React.FC = () => {
       await saveToGitHub();
       setSyncStatus('SUCCESS');
       setTimeout(() => setSyncStatus('IDLE'), 3000);
-      alert("Sistem başarıyla GitHub Cloud ile senkronize edildi.");
+      alert("Sistem başarıyla GitHub Cloud ile senkronize edildi. Artık tüm ziyaretçiler güncel veriyi görebilir.");
     } catch (error: any) {
       setSyncStatus('ERROR');
       setSyncError(error.message);
@@ -97,8 +97,8 @@ export const Admin: React.FC = () => {
   };
 
   const handleManualPull = async () => {
-    if (confirm("DİKKAT: Buluttaki veriler çekilecek. Henüz PUSH edilmemiş yerel değişiklikleriniz kaybolabilir. Devam edilsin mi?")) {
-      await refreshFromGitHub();
+    if (confirm("DİKKAT: Buluttaki veriler zorla çekilecek. Henüz PUSH edilmemiş yerel değişiklikleriniz kaybolabilir. Devam edilsin mi?")) {
+      await refreshFromGitHub(true);
       alert("Bulut verileri başarıyla çekildi.");
     }
   };
@@ -136,10 +136,19 @@ export const Admin: React.FC = () => {
       <aside className="w-full lg:w-64 border-r border-white/5 p-8 flex flex-col bg-[#050505] lg:h-screen lg:sticky lg:top-0">
         <div className="mb-10 text-lg font-black italic uppercase">TESSERA <span className="text-[9px] text-accent block not-italic font-bold tracking-widest">ADMIN_V2.6</span></div>
         <div className="space-y-3 mb-8">
-          <button onClick={handleGlobalPublish} disabled={syncStatus === 'SYNCING'} className={`w-full py-3 border text-[9px] font-black uppercase tracking-widest transition-all ${syncStatus === 'SYNCING' ? 'bg-accent/20 animate-pulse border-accent' : syncStatus === 'SUCCESS' ? 'bg-green-600 border-green-600 text-white' : 'border-accent text-accent hover:bg-accent hover:text-white'}`}>
-            {syncStatus === 'SYNCING' ? 'PUSHING_DATA...' : syncStatus === 'SUCCESS' ? 'SYNC_SUCCESS' : 'PUBLISH_TO_GITHUB'}
+          <button 
+            onClick={handleGlobalPublish} 
+            disabled={syncStatus === 'SYNCING'} 
+            className={`w-full py-3 border text-[9px] font-black uppercase tracking-widest transition-all ${
+              syncStatus === 'SYNCING' ? 'bg-accent/20 animate-pulse border-accent' : 
+              syncStatus === 'SUCCESS' ? 'bg-green-600 border-green-600 text-white' : 
+              'border-accent text-accent hover:bg-accent hover:text-white'
+            }`}
+          >
+            {syncStatus === 'SYNCING' ? 'SİSTEME İŞLENİYOR...' : syncStatus === 'SUCCESS' ? 'BAŞARIYLA YAYINLANDI' : 'TÜMÜNÜ YAYINLA (PUSH)'}
           </button>
-          <button onClick={handleManualPull} className="w-full py-2 border border-white/10 text-[8px] font-bold uppercase tracking-widest hover:bg-white/5 transition-colors">PULL_FROM_CLOUD</button>
+          <button onClick={handleManualPull} className="w-full py-2 border border-white/10 text-[8px] font-bold uppercase tracking-widest hover:bg-white/5 transition-colors">BULUTTAN VERİ ÇEK (PULL)</button>
+          <div className="text-[7px] opacity-30 uppercase text-center mt-2 leading-tight">Ziyaretçilerin görmesi için "TÜMÜNÜ YAYINLA" butonuna basmalısınız.</div>
         </div>
         <nav className="space-y-1 flex-grow overflow-y-auto custom-scrollbar">
           {[
