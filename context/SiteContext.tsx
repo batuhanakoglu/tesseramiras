@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { SiteConfig, Post, Message, Announcement } from '../types';
 import { INITIAL_CONFIG } from '../constants';
@@ -23,6 +24,7 @@ interface SiteContextType {
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
 
+// UTF-8 uyumlu Base64 encode (Türkçe karakterler için güvenli)
 const toBase64 = (str: string) => {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
     return String.fromCharCode(parseInt(p1, 16));
@@ -51,11 +53,15 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshFromGitHub = useCallback(async (force: boolean = false) => {
     if (!config.githubUsername || !config.githubRepo) return;
     
-    // Eğer admin sayfasındaysak ve zorunlu (force) değilse otomatik çekme yapma
+    // Admin panelindeysek ve zorunlu değilse otomatik çekme yapma (çalışmaların silinmemesi için)
     const isAdmin = window.location.hash.includes('/admin');
-    if (isAdmin && !force) return;
+    const isVisitor = !githubToken;
+
+    // Ziyaretçiler her zaman en güncel veriyi çekmeli, Admin ise sadece istediğinde.
+    if (!isVisitor && !force && isAdmin) return;
 
     try {
+      // ?t= timestamp ekleyerek GitHub cache mekanizmasını atlatıyoruz
       const url = `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/data/config.json?t=${Date.now()}`;
       const response = await fetch(url, { cache: 'no-store' });
       
@@ -63,12 +69,11 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const remoteData = await response.json();
         
         setConfig(prev => {
-          // Gelen mesajlar kıymetlidir, yerel ve uzak mesajları birleştir
+          // Gelen mesajları yerel mesajlarla birleştir (ileti kaybını önlemek için)
           const remoteMsgs = remoteData.messages || [];
           const localMsgs = prev.messages || [];
-          
-          // Sadece uzakta olmayan yerel mesajları ekle (kayıp önleme)
           const mergedMessages = [...remoteMsgs];
+          
           localMsgs.forEach(lm => {
             if (!mergedMessages.find(rm => rm.id === lm.id)) {
               mergedMessages.push(lm);
@@ -78,20 +83,20 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { 
             ...remoteData, 
             messages: mergedMessages,
-            // GitHub ayarlarını yerelden koru (yanlışlıkla bozulmaması için)
+            // Bağlantı ayarlarını yerelden koru
             githubUsername: prev.githubUsername,
             githubRepo: prev.githubRepo,
             githubEmail: prev.githubEmail
           };
         });
-        console.log("Tessera Sync: Data loaded from GitHub.");
+        console.log("Tessera Cloud: Veriler başarıyla GitHub'dan senkronize edildi.");
       }
     } catch (e) {
-      console.warn("Tessera Sync: Cloud unreachable, using local cache.");
+      console.warn("Tessera Cloud: Sunucuya erişilemedi, yerel önbellek kullanılıyor.");
     }
-  }, [config.githubUsername, config.githubRepo]);
+  }, [config.githubUsername, config.githubRepo, githubToken]);
 
-  // UYGULAMA AÇILDIĞINDA OTOMATİK ÇEK
+  // Sayfa ilk yüklendiğinde veriyi buluttan çek
   useEffect(() => {
     refreshFromGitHub();
   }, []);
@@ -162,7 +167,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const uploadImageToGitHub = useCallback(async (file: File): Promise<string> => {
-    if (!githubToken) throw new Error('PAT Token eksik.');
+    if (!githubToken) throw new Error('GitHub PAT Token eksik.');
     const reader = new FileReader();
     const base64Promise = new Promise<string>((resolve) => {
       reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -179,17 +184,14 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: JSON.stringify({ message: `Upload image: ${fileName}`, content: base64Content }),
     });
 
-    if (!res.ok) throw new Error('Yükleme başarısız.');
+    if (!res.ok) throw new Error('Görsel yükleme başarısız.');
     return `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/${path}`;
   }, [config, githubToken]);
 
   const saveToGitHub = useCallback(async () => {
-    if (!githubToken) throw new Error('GitHub PAT Token eksik.');
+    if (!githubToken) throw new Error('GitHub Token bulunamadı. Lütfen ROOT_CONFIG sekmesine gidin.');
     
-    // Kaydetmeden önce config kopyasını al (gereksiz verileri temizlemek için)
-    const configToSave = { ...config };
-    
-    const jsonString = JSON.stringify(configToSave, null, 2);
+    const jsonString = JSON.stringify(config, null, 2);
     const jsonContent = toBase64(jsonString);
     const path = 'data/config.json';
     const url = `https://api.github.com/repos/${config.githubUsername}/${config.githubRepo}/contents/${path}`;
@@ -207,7 +209,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       method: 'PUT',
       headers: { 'Authorization': `token ${githubToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: 'Sync: Site Configuration Update',
+        message: 'Tessera Sync: Site Update',
         content: jsonContent,
         sha: sha || undefined
       }),
@@ -215,7 +217,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.message || 'Push hatası.');
+      throw new Error(err.message || 'Buluta gönderme işlemi başarısız.');
     }
   }, [config, githubToken]);
 
@@ -232,6 +234,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useSite = () => {
   const context = useContext(SiteContext);
-  if (!context) throw new Error('useSite context error');
+  if (!context) throw new Error('SiteProvider bulunamadı.');
   return context;
 };
