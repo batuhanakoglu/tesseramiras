@@ -32,44 +32,31 @@ const toBase64 = (str: string) => {
 export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<SiteConfig>(() => {
     const saved = localStorage.getItem('tessera_v2_config');
-    const parsed = saved ? JSON.parse(saved) : INITIAL_CONFIG;
-    // Güvenlik: Asla config içinde ghp_ token barındırma
-    if (parsed.githubToken) delete parsed.githubToken;
-    return parsed;
+    return saved ? JSON.parse(saved) : INITIAL_CONFIG;
   });
 
   const [githubToken, setGithubTokenState] = useState<string>(() => {
     return localStorage.getItem('tessera_secure_token') || '';
   });
 
-  // Uzaktaki veriyi çekme fonksiyonu
   const refreshFromGitHub = useCallback(async () => {
     if (!config.githubUsername || !config.githubRepo) return;
-    
     try {
-      // Cache'i atlamak için timestamp ekliyoruz
+      // Önbelleği (cache) kırmak için timestamp ve no-store kullanıyoruz
       const url = `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/data/config.json?t=${Date.now()}`;
-      const response = await fetch(url);
+      const response = await fetch(url, { cache: 'no-store' });
       if (response.ok) {
-        const remoteConfig = await response.json();
-        // Güvenlik: Gelen veride token varsa temizle
-        if (remoteConfig.githubToken) delete remoteConfig.githubToken;
-        
-        setConfig(prev => ({
-          ...remoteConfig,
-          // Lokal ayarları koru (Token ve kullanıcı bilgileri gibi)
-          githubUsername: prev.githubUsername,
-          githubRepo: prev.githubRepo,
-          githubEmail: prev.githubEmail
-        }));
-        console.log("Tessera: Cloud data synchronized.");
+        const remoteData = await response.json();
+        // Token güvenliği: Gelen veride token varsa temizle
+        if (remoteData.githubToken) delete remoteData.githubToken;
+        setConfig(prev => ({ ...remoteData }));
+        console.log("Tessera Sync: Data pulled from GitHub.");
       }
-    } catch (error) {
-      console.error("Tessera Sync Error:", error);
+    } catch (e) {
+      console.warn("Tessera Sync: Remote data could not be reached.");
     }
   }, [config.githubUsername, config.githubRepo]);
 
-  // Uygulama açıldığında veriyi çek
   useEffect(() => {
     refreshFromGitHub();
   }, []);
@@ -84,11 +71,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateConfig = useCallback((updates: Partial<SiteConfig>) => {
-    setConfig(prev => {
-      const newConfig = { ...prev, ...updates };
-      if ((newConfig as any).githubToken) delete (newConfig as any).githubToken;
-      return newConfig;
-    });
+    setConfig(prev => ({ ...prev, ...updates }));
   }, []);
 
   const addPost = useCallback((postData: Omit<Post, 'id' | 'date'>) => {
@@ -153,7 +136,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const uploadImageToGitHub = useCallback(async (file: File): Promise<string> => {
-    if (!githubToken) throw new Error('GitHub Token Eksik');
+    if (!githubToken) throw new Error('Token eksik.');
     const reader = new FileReader();
     const base64Promise = new Promise<string>((resolve) => {
       reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -166,37 +149,37 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const response = await fetch(url, {
       method: 'PUT',
-      headers: {
-        'Authorization': `token ${githubToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `token ${githubToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: `Tessera Media: ${fileName}`,
-        content: base64Content,
-        committer: { name: config.authorName, email: config.githubEmail || 'noreply@github.com' }
+        message: `Upload: ${fileName}`,
+        content: base64Content
       }),
     });
 
-    if (!response.ok) throw new Error('Görsel yüklenemedi.');
+    if (!response.ok) throw new Error('Yükleme hatası.');
     return `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/${path}`;
   }, [config, githubToken]);
 
   const saveToGitHub = useCallback(async () => {
-    if (!githubToken) throw new Error('Token eksik! ROOT_CONFIG altından PAT tanımlayın.');
+    if (!githubToken) throw new Error('GitHub PAT eksik.');
 
-    // KESİN ÇÖZÜM: Gönderilen JSON içinden tüm hassas verileri temizle
+    // KESİN ÇÖZÜM: Gönderilen veriden ghp_ içeren her şeyi temizle
     const configToSave = JSON.parse(JSON.stringify(config));
-    delete configToSave.githubToken;
-    // Ekstra güvenlik: Eğer bir şekilde ghp_ içeren bir string kaldıysa onu da temizleyelim
-    Object.keys(configToSave).forEach(key => {
-      if (typeof configToSave[key] === 'string' && configToSave[key].startsWith('ghp_')) {
-        configToSave[key] = "";
-      }
-    });
     
+    const cleanObject = (obj: any) => {
+      for (const key in obj) {
+        if (typeof obj[key] === 'string' && obj[key].includes('ghp_')) {
+          obj[key] = ""; // Token değerini boşalt
+        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+          cleanObject(obj[key]);
+        }
+      }
+    };
+    cleanObject(configToSave);
+    if (configToSave.githubToken) delete configToSave.githubToken;
+
     const jsonString = JSON.stringify(configToSave, null, 2);
     const jsonContent = toBase64(jsonString);
-
     const path = 'data/config.json';
     const url = `https://api.github.com/repos/${config.githubUsername}/${config.githubRepo}/contents/${path}`;
     
@@ -211,21 +194,17 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const response = await fetch(url, {
       method: 'PUT',
-      headers: {
-        'Authorization': `token ${githubToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `token ${githubToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: 'Tessera: Archive Synchronized',
+        message: 'Sync: Tessera Cloud Update',
         content: jsonContent,
-        sha: sha || undefined,
-        committer: { name: config.authorName, email: config.githubEmail || 'noreply@github.com' }
+        sha: sha || undefined
       }),
     });
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.message || 'Push başarısız oldu.');
+      throw new Error(err.message || 'Push hatası.');
     }
   }, [config, githubToken]);
 
@@ -233,7 +212,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <SiteContext.Provider value={{ 
       config, githubToken, setGithubToken, updateConfig, addPost, updatePost, deletePost, 
       addAnnouncement, updateAnnouncement, deleteAnnouncement, 
-      addMessage, deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub, refreshFromGitHub
+      addMessage, deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub, refreshFromGitHub 
     }}>
       {children}
     </SiteContext.Provider>
