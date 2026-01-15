@@ -21,7 +21,7 @@ export const INITIAL_CONFIG: SiteConfig = {
   githubUsername: 'batuhanakoglu',
   githubEmail: '',
   githubToken: '',
-  githubRepo: 'tessera',
+  githubRepo: 'tesseramiras',
   githubImagePath: 'assets/archive',
   githubProjects: [],
   socialLinks: {
