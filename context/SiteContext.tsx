@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { SiteConfig, Post, Message, Announcement } from '../types';
 import { INITIAL_CONFIG } from '../constants';
@@ -21,7 +20,7 @@ interface SiteContextType {
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
 
-// Helper for robust Base64 encoding (supports Unicode)
+// Unicode destekli Base64 kodlayıcı
 const toBase64 = (str: string) => {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
     return String.fromCharCode(parseInt(p1, 16));
@@ -32,7 +31,8 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [config, setConfig] = useState<SiteConfig>(() => {
     const saved = localStorage.getItem('tessera_v2_config');
     const parsed = saved ? JSON.parse(saved) : INITIAL_CONFIG;
-    if (!parsed.announcements) parsed.announcements = INITIAL_CONFIG.announcements;
+    if (!parsed.announcements) parsed.announcements = INITIAL_CONFIG.announcements || [];
+    if (!parsed.messages) parsed.messages = [];
     return parsed;
   });
 
@@ -106,16 +106,12 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const uploadImageToGitHub = useCallback(async (file: File): Promise<string> => {
-    if (!config.githubToken) throw new Error('GitHub Token Eksik (Personal Access Token)');
-    if (!config.githubRepo) throw new Error('GitHub Repo Adı Eksik');
-    if (!config.githubUsername) throw new Error('GitHub Kullanıcı Adı Eksik');
-
+    if (!config.githubToken) throw new Error('GitHub Token Eksik');
     const reader = new FileReader();
     const base64Promise = new Promise<string>((resolve) => {
       reader.onload = () => resolve((reader.result as string).split(',')[1]);
       reader.readAsDataURL(file);
     });
-
     const base64Content = await base64Promise;
     const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
     const path = `${config.githubImagePath}/${fileName}`;
@@ -128,47 +124,36 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: `Tessera: Media Upload - ${fileName}`,
+        message: `Tessera Media: ${fileName}`,
         content: base64Content,
-        committer: { 
-          name: config.authorName || config.githubUsername, 
-          email: config.githubEmail || 'noreply@github.com' 
-        }
+        committer: { name: config.authorName, email: config.githubEmail || 'noreply@github.com' }
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Görsel Yükleme Hatası: ${errorData.message}`);
-    }
+    if (!response.ok) throw new Error('Görsel yüklenemedi.');
     return `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/${path}`;
   }, [config]);
 
   const saveToGitHub = useCallback(async () => {
-    if (!config.githubToken) throw new Error('GitHub Token girilmemiş. Lütfen ROOT_CONFIG sekmesinden PAT token ekleyin.');
-    if (!config.githubRepo) throw new Error('Hedef Depo (Repo) ismi belirtilmemiş.');
-    if (!config.githubUsername) throw new Error('GitHub Kullanıcı Adı belirtilmemiş.');
+    if (!config.githubToken) throw new Error('Token eksik!');
+
+    // KRİTİK NOKTA: Gönderilecek veriden token'ı temizle
+    const configToSave = { ...config, githubToken: "" }; 
+    const jsonString = JSON.stringify(configToSave, null, 2);
+    const jsonContent = toBase64(jsonString);
 
     const path = 'data/config.json';
     const url = `https://api.github.com/repos/${config.githubUsername}/${config.githubRepo}/contents/${path}`;
     
     let sha = '';
     try {
-      const getRes = await fetch(url, {
-        headers: { 'Authorization': `token ${config.githubToken}` }
-      });
+      const getRes = await fetch(url, { headers: { 'Authorization': `token ${config.githubToken}` } });
       if (getRes.ok) {
         const fileData = await getRes.json();
         sha = fileData.sha;
       }
-    } catch (e) {
-      console.log("Mevcut dosya bulunamadı, yeni oluşturuluyor...");
-    }
+    } catch (e) {}
 
-    // Use robust Base64 encoding for the entire config JSON
-    const jsonString = JSON.stringify(config, null, 2);
-    const jsonContent = toBase64(jsonString);
-    
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -176,37 +161,24 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: 'Tessera: Global Site Update',
+        message: 'Tessera: Content Sync',
         content: jsonContent,
         sha: sha || undefined,
-        committer: { 
-          name: config.authorName || config.githubUsername, 
-          email: config.githubEmail || 'noreply@github.com' 
-        }
+        committer: { name: config.authorName, email: config.githubEmail || 'noreply@github.com' }
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`GitHub PUSH Hatası: ${errorData.message}`);
+      const err = await response.json();
+      throw new Error(err.message);
     }
   }, [config]);
 
   return (
     <SiteContext.Provider value={{ 
-      config, 
-      updateConfig, 
-      addPost, 
-      updatePost, 
-      deletePost, 
-      addAnnouncement, 
-      updateAnnouncement, 
-      deleteAnnouncement, 
-      addMessage, 
-      deleteMessage, 
-      markAsRead, 
-      saveToGitHub, 
-      uploadImageToGitHub 
+      config, updateConfig, addPost, updatePost, deletePost, 
+      addAnnouncement, updateAnnouncement, deleteAnnouncement, 
+      addMessage, deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub 
     }}>
       {children}
     </SiteContext.Provider>
@@ -215,6 +187,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useSite = () => {
   const context = useContext(SiteContext);
-  if (!context) throw new Error('useSite must be used within a SiteProvider');
+  if (!context) throw new Error('useSite error');
   return context;
 };
