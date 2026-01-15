@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { useSite } from '../context/SiteContext';
 import { Link } from 'react-router-dom';
@@ -27,17 +28,17 @@ export const Home: React.FC = () => {
     if (!isDown || !scrollRef.current) return;
     e.preventDefault();
     const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
+    const walk = (x - startX) * 2.5; // Hassasiyet artırıldı
     scrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
   return (
     <div className="bg-black">
       {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex items-center px-6 md:px-10 py-24 max-w-screen-2xl mx-auto border-b border-white/5 animate-entry overflow-hidden">
+      <section className="relative min-h-[85vh] flex items-center px-6 md:px-10 py-24 max-w-screen-2xl mx-auto border-b border-white/5 animate-entry overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src={config.heroImageUrl} alt="Hero" className="w-full h-full object-cover grayscale opacity-20 contrast-150" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+          <img src={config.heroImageUrl} alt="Hero" className="w-full h-full object-cover grayscale opacity-20 contrast-125" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-transparent" />
         </div>
         <div className="relative z-10 w-full">
           <div className="text-mono text-[10px] font-bold tracking-[0.5em] text-accent uppercase mb-10">ARCHIVE_SYSTEM // READY</div>
@@ -52,16 +53,16 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Draggable Announcements Slider */}
+      {/* Announcements Slider */}
       {activeAnnouncements.length > 0 && (
-        <section className="border-b border-white/5 bg-[#050505] py-20">
+        <section className="border-b border-white/5 bg-[#050505] py-24">
           <div className="px-6 md:px-10 max-w-screen-2xl mx-auto">
             <div className="flex justify-between items-end mb-16">
               <div>
                 <div className="text-mono text-[10px] font-bold tracking-[0.5em] text-accent uppercase italic mb-2">NEWS_STREAM // DISPATCH</div>
                 <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic">GÜNCEL_DUYURULAR.</h2>
               </div>
-              <div className="hidden md:block text-mono text-[9px] opacity-20 uppercase tracking-widest">SÜRÜKLE_KAYDIR →</div>
+              <div className="hidden md:block text-mono text-[9px] opacity-20 uppercase tracking-widest">TUT_KAYDIR →</div>
             </div>
 
             <div 
@@ -70,7 +71,7 @@ export const Home: React.FC = () => {
               onMouseLeave={handleMouseLeave}
               onMouseUp={handleMouseUp}
               onMouseMove={handleMouseMove}
-              className="flex gap-10 overflow-x-auto cursor-grab active:cursor-grabbing pb-10 scrollbar-hide select-none snap-x snap-mandatory"
+              className="flex gap-10 overflow-x-auto cursor-grab active:cursor-grabbing pb-12 scrollbar-hide select-none snap-x snap-mandatory"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {activeAnnouncements.map((ann) => (
@@ -79,10 +80,10 @@ export const Home: React.FC = () => {
                     <div className="w-full md:w-2/5 aspect-[4/3] md:aspect-auto overflow-hidden grayscale group-hover:grayscale-0 transition-all">
                       <img src={ann.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[4s]" alt={ann.title} draggable="false" />
                     </div>
-                    <div className="w-full md:w-3/5 p-8 flex flex-col justify-between">
+                    <div className="w-full md:w-3/5 p-8 flex flex-col justify-between bg-black/40">
                       <div>
                         <span className="text-mono text-[8px] text-accent font-bold tracking-widest uppercase mb-4 block">[{ann.date}]</span>
-                        <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight mb-4 leading-tight">{ann.title}</h3>
+                        <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight mb-4 leading-tight group-hover:text-accent transition-colors">{ann.title}</h3>
                         <p className="text-sm text-white/40 italic font-light leading-relaxed line-clamp-4">{ann.content}</p>
                       </div>
                     </div>
@@ -102,6 +103,7 @@ export const Home: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 items-center">
               <div className="lg:col-span-7 aspect-[16/9] overflow-hidden grayscale group-hover:grayscale-0 transition-all border border-white/10 relative">
                 <img src={latestPost.imageUrl} alt={latestPost.title} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-all"></div>
               </div>
               <div className="lg:col-span-5 space-y-8">
                 <div className="flex items-center gap-4 text-mono text-[10px] font-bold uppercase">
@@ -109,7 +111,7 @@ export const Home: React.FC = () => {
                   <span className="opacity-20">//</span>
                   <span className="opacity-30 tracking-widest">{latestPost.date}</span>
                 </div>
-                <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase group-hover:text-accent transition-all text-white leading-none">{latestPost.title}</h2>
+                <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase group-hover:text-accent transition-all text-white leading-[0.9]">{latestPost.title}</h2>
                 <p className="text-xl text-white/30 font-light leading-relaxed italic">{latestPost.excerpt}</p>
                 <div className="pt-6">
                   <span className="text-mono text-[10px] font-black tracking-[0.4em] border-b border-accent/20 pb-2 group-hover:border-accent group-hover:text-accent transition-all uppercase text-white">DATA_READ →</span>
@@ -120,7 +122,7 @@ export const Home: React.FC = () => {
         </section>
       )}
 
-      {/* Contact */}
+      {/* Contact Section */}
       <section className="px-6 md:px-10 py-32 max-w-screen-2xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
           <div className="lg:col-span-5">
