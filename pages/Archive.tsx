@@ -1,6 +1,19 @@
+
 import React, { useEffect } from 'react';
 import { useSite } from '../context/SiteContext';
 import { Link } from 'react-router-dom';
+
+// Utility for parsing Turkish dates "DD MONTH YYYY"
+const parseTurkishDate = (dateStr: string) => {
+  const months = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+  const parts = dateStr.trim().split(' ');
+  if (parts.length !== 3) return new Date(0);
+  const day = parseInt(parts[0]);
+  const monthIndex = months.indexOf(parts[1].toUpperCase());
+  const year = parseInt(parts[2]);
+  if (monthIndex === -1) return new Date(0);
+  return new Date(year, monthIndex, day);
+};
 
 export const Archive: React.FC = () => {
   const { config } = useSite();
@@ -9,9 +22,9 @@ export const Archive: React.FC = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Postları tarihe göre sırala (en yeni en üstte)
+  // Sort posts chronologically (newest first)
   const sortedPosts = [...config.posts].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
+    return parseTurkishDate(b.date).getTime() - parseTurkishDate(a.date).getTime();
   });
 
   return (
@@ -40,7 +53,7 @@ export const Archive: React.FC = () => {
               <Link 
                 to={`/post/${post.id}`} 
                 key={post.id} 
-                className="group flex flex-col md:flex-row items-start md:items-center py-10 border-b border-white/10 hover:bg-white transition-all duration-500 px-4"
+                className="group flex flex-col md:flex-row items-start md:items-center py-10 border-b border-white/10 hover:bg-white transition-all duration-500 px-4 no-underline"
               >
                 {/* Tarih & Kategori */}
                 <div className="flex items-center gap-8 md:w-1/4 mb-4 md:mb-0">

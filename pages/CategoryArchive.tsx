@@ -12,6 +12,18 @@ const CATEGORY_SLUG_MAP: Record<string, string> = {
   'dijitallesme': 'DİJİTALLEŞME'
 };
 
+// Utility for parsing Turkish dates "DD MONTH YYYY"
+const parseTurkishDate = (dateStr: string) => {
+  const months = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+  const parts = dateStr.trim().split(' ');
+  if (parts.length !== 3) return new Date(0);
+  const day = parseInt(parts[0]);
+  const monthIndex = months.indexOf(parts[1].toUpperCase());
+  const year = parseInt(parts[2]);
+  if (monthIndex === -1) return new Date(0);
+  return new Date(year, monthIndex, day);
+};
+
 export const CategoryArchive: React.FC = () => {
   const { name } = useParams<{ name: string }>();
   const { config } = useSite();
@@ -26,7 +38,7 @@ export const CategoryArchive: React.FC = () => {
     if (!categoryName) return [];
     return config.posts
       .filter(p => p.category.toUpperCase() === categoryName.toUpperCase())
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => parseTurkishDate(b.date).getTime() - parseTurkishDate(a.date).getTime());
   }, [config.posts, categoryName]);
 
   useEffect(() => {
@@ -37,7 +49,7 @@ export const CategoryArchive: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-center p-8 bg-black">
         <h1 className="text-4xl font-black mb-4 uppercase tracking-tighter text-white">GEÇERSİZ DİZİN</h1>
-        <Link to="/" className="text-mono text-[10px] border border-white/20 px-6 py-3 hover:bg-white hover:text-black transition-all font-bold tracking-[0.3em] text-white">ANA SAYFAYA DÖN</Link>
+        <Link to="/" className="text-mono text-[10px] border border-white/20 px-6 py-3 hover:bg-white hover:text-black transition-all font-bold tracking-[0.3em] text-white no-underline">ANA SAYFAYA DÖN</Link>
       </div>
     );
   }
@@ -68,7 +80,7 @@ export const CategoryArchive: React.FC = () => {
               <Link 
                 to={`/post/${post.id}`} 
                 key={post.id}
-                className="group relative bg-white/5 border border-white/10 overflow-hidden hover:border-white transition-all duration-500 flex flex-col"
+                className="group relative bg-white/5 border border-white/10 overflow-hidden hover:border-white transition-all duration-500 flex flex-col no-underline"
               >
                 {/* Image Section */}
                 <div className="aspect-[16/10] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700 relative">
@@ -112,7 +124,7 @@ export const CategoryArchive: React.FC = () => {
             <p className="text-mono text-xs opacity-20 uppercase tracking-[0.5em] text-white">BU DİZİNDE HENÜZ VERİ KAYDI BULUNAMADI</p>
             <Link 
               to="/" 
-              className="inline-block mt-12 text-[10px] font-black tracking-widest uppercase border border-white/20 px-10 py-4 hover:bg-white hover:text-black transition-all text-white"
+              className="inline-block mt-12 text-[10px] font-black tracking-widest uppercase border border-white/20 px-10 py-4 hover:bg-white hover:text-black transition-all text-white no-underline"
             >
               ANA SAYFAYA DÖN
             </Link>
@@ -126,7 +138,7 @@ export const CategoryArchive: React.FC = () => {
           <p className="text-mono text-[10px] opacity-20 uppercase tracking-[0.4em] text-white italic">
             DIGITAL_ARCHIVE_PROTOCOL_STABLE // CATEGORY_VIEW: {categoryName}
           </p>
-          <Link to="/archive" className="text-xs font-black tracking-[0.3em] uppercase border-b border-white/30 hover:border-white transition-all text-white">
+          <Link to="/archive" className="text-xs font-black tracking-[0.3em] uppercase border-b border-white/30 hover:border-white transition-all text-white no-underline">
             TÜM ARŞİVİ KEŞFET
           </Link>
         </div>
