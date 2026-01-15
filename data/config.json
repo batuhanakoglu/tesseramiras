@@ -51,6 +51,14 @@
   "messages": [],
   "announcements": [
     {
+      "title": "yağız vurduruyo",
+      "content": "buralarda vurdurmuş",
+      "imageUrl": "https://raw.githubusercontent.com/batuhanakoglu/tesseramiras/main/assets/archive/1768484327080-Luigi-Storari-Smyrne-Plan-.jpg",
+      "isActive": true,
+      "id": "7phoffbwc",
+      "date": "15 OCAK 2026"
+    },
+    {
       "title": "Yağız bir göttür ",
       "content": "evet bu bir gerçek",
       "imageUrl": "",
