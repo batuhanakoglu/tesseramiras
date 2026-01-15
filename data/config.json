@@ -51,6 +51,14 @@
   "messages": [],
   "announcements": [
     {
+      "title": "Yağız bir göttür ",
+      "content": "evet bu bir gerçek",
+      "imageUrl": "",
+      "isActive": true,
+      "id": "x7qdohwee",
+      "date": "15 OCAK 2026"
+    },
+    {
       "id": "a1",
       "title": "TESSERA v2.6 SİSTEM GÜNCELLEMESİ",
       "content": "Arşiv altyapısı Terracotta Protokolü ile modernize edildi. Artık tüm veriler yüksek hassasiyetli görselleştirme desteğine sahip.",
