@@ -1,6 +1,7 @@
 
 import { SiteConfig } from './types';
 
+// githubToken is removed from INITIAL_CONFIG to match the SiteConfig interface in types.ts
 export const INITIAL_CONFIG: SiteConfig = {
   siteTitle: 'TESSERA | MİRAS',
   accentColor: '#FFFFFF',
@@ -20,7 +21,6 @@ export const INITIAL_CONFIG: SiteConfig = {
   ],
   githubUsername: 'batuhanakoglu',
   githubEmail: '',
-  githubToken: '',
   githubRepo: 'tesseramiras',
   githubImagePath: 'assets/archive',
   githubProjects: [],
