@@ -62,7 +62,6 @@ export interface SiteConfig {
   focusAreas: FocusArea[];
   githubUsername: string;
   githubEmail: string;
-  githubToken: string;
   githubRepo: string;
   githubImagePath: string;
   githubProjects: GitHubProject[];
