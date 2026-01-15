@@ -22,7 +22,8 @@ export const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>(AdminTab.OVERVIEW);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'IDLE' | 'SYNCING' | 'SUCCESS' | 'ERROR'>('IDLE');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   
@@ -68,14 +69,15 @@ export const Admin: React.FC = () => {
       setActiveTab(AdminTab.GITHUB);
       return;
     }
-    setIsPublishing(true);
+    setSyncStatus('SYNCING');
+    setSyncError(null);
     try {
       await saveToGitHub();
-      alert('BAŞARILI: Değişiklikler GitHub deposuna kaydedildi.');
+      setSyncStatus('SUCCESS');
+      setTimeout(() => setSyncStatus('IDLE'), 3000);
     } catch (error: any) {
-      alert(`KRİTİK HATA: ${error.message}`);
-    } finally {
-      setIsPublishing(false);
+      setSyncStatus('ERROR');
+      setSyncError(error.message);
     }
   };
 
@@ -152,11 +154,22 @@ export const Admin: React.FC = () => {
         
         <button 
           onClick={handleGlobalPublish} 
-          disabled={isPublishing} 
-          className={`w-full mb-8 py-3 border border-accent/30 text-accent text-[9px] font-black uppercase tracking-widest hover:bg-accent hover:text-white transition-all ${isPublishing ? 'opacity-50 animate-pulse' : ''}`}
+          disabled={syncStatus === 'SYNCING'} 
+          className={`w-full mb-8 py-3 border text-[9px] font-black uppercase tracking-widest transition-all ${
+            syncStatus === 'SYNCING' ? 'bg-accent/20 border-accent/40 animate-pulse text-white' :
+            syncStatus === 'SUCCESS' ? 'bg-green-600 border-green-400 text-white' :
+            syncStatus === 'ERROR' ? 'bg-red-900 border-red-500 text-white' :
+            'border-accent/30 text-accent hover:bg-accent hover:text-white'
+          }`}
         >
-          {isPublishing ? 'SYNCING...' : 'GITHUB_PUSH'}
+          {syncStatus === 'SYNCING' ? 'PUSHING...' : syncStatus === 'SUCCESS' ? 'PUSH_OK' : syncStatus === 'ERROR' ? 'FAILED' : 'GITHUB_PUSH'}
         </button>
+
+        {syncError && (
+          <div className="mb-4 text-[8px] text-red-500 font-mono uppercase bg-red-900/10 p-2 border border-red-900/20">
+            Error: {syncError}
+          </div>
+        )}
 
         <nav className="space-y-1 flex-grow overflow-y-auto custom-scrollbar">
           {[
@@ -256,8 +269,7 @@ export const Admin: React.FC = () => {
               </div>
 
               <textarea placeholder="ÖZET (Max 150 Karakter)" rows={2} className="w-full bg-transparent border-b border-white/10 text-sm italic py-2 focus:outline-none" value={postForm.excerpt} onChange={e => setPostForm({...postForm, excerpt: e.target.value})} />
-              
-              <textarea placeholder="TAM İÇERİK" rows={12} className="w-full bg-transparent border border-white/10 p-4 text-sm focus:outline-none focus:border-accent font-light leading-relaxed custom-scrollbar" value={postForm.content} onChange={e => setPostForm({...postForm, content: e.target.value})} />
+              <textarea placeholder="TAM İÇERİK (Markdown destekli)" rows={12} className="w-full bg-transparent border border-white/10 p-4 text-sm focus:outline-none focus:border-accent font-light leading-relaxed custom-scrollbar" value={postForm.content} onChange={e => setPostForm({...postForm, content: e.target.value})} />
               
               <button type="submit" className="w-full bg-accent py-5 text-[10px] font-black uppercase tracking-[0.4em] hover:bg-white hover:text-black transition-all">
                 {editingId ? 'KAYDI GÜNCELLE' : 'ARŞİVE COMMIT ET'}
@@ -287,7 +299,7 @@ export const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* ANNOUNCEMENTS */}
+        {/* ANNOUNCEMENTS (DUYURULAR) - TAMİR EDİLDİ */}
         {activeTab === AdminTab.ANNOUNCEMENTS && (
           <div className="space-y-12 animate-entry">
             <form onSubmit={handleAnnSubmit} className="space-y-6 bg-white/5 p-8 border border-white/5">
@@ -295,7 +307,9 @@ export const Admin: React.FC = () => {
                 <h3 className="text-mono text-[10px] text-accent font-bold uppercase tracking-widest">[{editingAnnId ? 'EDIT_ANN' : 'NEW_ANN'}]</h3>
                 {editingAnnId && <button type="button" onClick={() => {setEditingAnnId(null); setAnnForm({title:'', content:'', imageUrl:'', isActive: true})}} className="text-[8px] uppercase font-bold opacity-40 hover:opacity-100">İptal</button>}
               </div>
+              
               <input type="text" placeholder="DUYURU BAŞLIĞI" required className="w-full bg-transparent border-b border-white/10 py-4 text-xl font-black uppercase focus:outline-none focus:border-accent" value={annForm.title} onChange={e => setAnnForm({...annForm, title: e.target.value})} />
+              
               <div className="space-y-2">
                 <label className="text-[9px] font-bold opacity-30 uppercase tracking-widest">DUYURU GÖRSELİ</label>
                 <div className="flex gap-4">
@@ -304,15 +318,19 @@ export const Admin: React.FC = () => {
                   <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleImageUpload(e, 'ann')} />
                 </div>
               </div>
+              
               <textarea placeholder="DUYURU İÇERİĞİ" rows={4} className="w-full bg-transparent border border-white/10 p-4 text-sm focus:outline-none focus:border-accent font-light italic leading-relaxed" value={annForm.content} onChange={e => setAnnForm({...annForm, content: e.target.value})} />
+              
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="ann-active" className="w-4 h-4 accent-accent" checked={annForm.isActive} onChange={e => setAnnForm({...annForm, isActive: e.target.checked})} />
                 <label htmlFor="ann-active" className="text-[9px] font-black uppercase tracking-widest cursor-pointer">AKTİF YAYIN</label>
               </div>
+              
               <button type="submit" className="w-full bg-accent py-4 text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all">
                 {editingAnnId ? 'GÜNCELLE' : 'DUYURU YAYINLA'}
               </button>
             </form>
+
             <div className="space-y-4">
               <h3 className="text-mono text-[10px] text-accent font-bold uppercase tracking-widest mb-6">EXISTING_ANNOUNCEMENTS</h3>
               {config.announcements.map(ann => (
@@ -388,7 +406,7 @@ export const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* AUTHOR */}
+        {/* AUTHOR & UI SETTINGS TABS STAY SAME BUT ENSURE THEY ARE MAPPED CORRECTLY */}
         {activeTab === AdminTab.AUTHOR && (
           <div className="max-w-4xl space-y-12 animate-entry">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -453,7 +471,6 @@ export const Admin: React.FC = () => {
                   </div>
                 </div>
              </div>
-             
              <div className="pt-10 border-t border-white/5 space-y-8">
                 <h3 className="text-mono text-[10px] text-accent font-bold tracking-[0.4em] uppercase italic">MANŞET_HERO_AYARLARI</h3>
                 <div className="space-y-6">
@@ -500,6 +517,7 @@ export const Admin: React.FC = () => {
                 <div className="space-y-2">
                   <label className="text-[9px] font-bold uppercase tracking-widest opacity-40 text-red-500">PERSONAL_ACCESS_TOKEN (PAT)</label>
                   <input type="password" placeholder="ghp_xxxxxxxxxxxx" className="w-full bg-black/40 border border-white/10 p-3 text-xs font-bold tracking-widest focus:border-accent focus:outline-none" value={config.githubToken} onChange={e => updateConfig({githubToken: e.target.value.trim()})} />
+                  <p className="text-[8px] text-white/30 italic">Not: Token 'contents' ve 'workflow' yetkilerine sahip olmalıdır.</p>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[9px] font-bold uppercase tracking-widest opacity-40">COMMITTER_EMAIL</label>
