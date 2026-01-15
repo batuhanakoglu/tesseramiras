@@ -18,12 +18,11 @@ interface SiteContextType {
   markAsRead: (id: string) => void;
   saveToGitHub: () => Promise<void>;
   uploadImageToGitHub: (file: File) => Promise<string>;
-  refreshFromGitHub: () => Promise<void>;
+  refreshFromGitHub: (force?: boolean) => Promise<void>;
 }
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
 
-// Base64 encoding helper for Turkish characters
 const toBase64 = (str: string) => {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
     return String.fromCharCode(parseInt(p1, 16));
@@ -49,25 +48,53 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('tessera_v2_config', JSON.stringify(config));
   }, [config]);
 
-  const refreshFromGitHub = useCallback(async () => {
+  const refreshFromGitHub = useCallback(async (force: boolean = false) => {
     if (!config.githubUsername || !config.githubRepo) return;
+    
+    // Eğer admin sayfasındaysak ve zorunlu (force) değilse otomatik çekme yapma
+    const isAdmin = window.location.hash.includes('/admin');
+    if (isAdmin && !force) return;
+
     try {
-      // Cache-busting URL (?t=timestamp) to avoid old versions
       const url = `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/data/config.json?t=${Date.now()}`;
       const response = await fetch(url, { cache: 'no-store' });
+      
       if (response.ok) {
         const remoteData = await response.json();
+        
         setConfig(prev => {
-          // Merge logic: Keep local messages that aren't on remote yet
+          // Gelen mesajlar kıymetlidir, yerel ve uzak mesajları birleştir
           const remoteMsgs = remoteData.messages || [];
-          const localOnlyMsgs = prev.messages.filter(lm => !remoteMsgs.some((rm: any) => rm.id === lm.id));
-          return { ...remoteData, messages: [...localOnlyMsgs, ...remoteMsgs] };
+          const localMsgs = prev.messages || [];
+          
+          // Sadece uzakta olmayan yerel mesajları ekle (kayıp önleme)
+          const mergedMessages = [...remoteMsgs];
+          localMsgs.forEach(lm => {
+            if (!mergedMessages.find(rm => rm.id === lm.id)) {
+              mergedMessages.push(lm);
+            }
+          });
+
+          return { 
+            ...remoteData, 
+            messages: mergedMessages,
+            // GitHub ayarlarını yerelden koru (yanlışlıkla bozulmaması için)
+            githubUsername: prev.githubUsername,
+            githubRepo: prev.githubRepo,
+            githubEmail: prev.githubEmail
+          };
         });
+        console.log("Tessera Sync: Data loaded from GitHub.");
       }
     } catch (e) {
-      console.warn("GitHub Cloud error:", e);
+      console.warn("Tessera Sync: Cloud unreachable, using local cache.");
     }
   }, [config.githubUsername, config.githubRepo]);
+
+  // UYGULAMA AÇILDIĞINDA OTOMATİK ÇEK
+  useEffect(() => {
+    refreshFromGitHub();
+  }, []);
 
   const updateConfig = useCallback((updates: Partial<SiteConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -158,7 +185,11 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const saveToGitHub = useCallback(async () => {
     if (!githubToken) throw new Error('GitHub PAT Token eksik.');
-    const jsonString = JSON.stringify(config, null, 2);
+    
+    // Kaydetmeden önce config kopyasını al (gereksiz verileri temizlemek için)
+    const configToSave = { ...config };
+    
+    const jsonString = JSON.stringify(configToSave, null, 2);
     const jsonContent = toBase64(jsonString);
     const path = 'data/config.json';
     const url = `https://api.github.com/repos/${config.githubUsername}/${config.githubRepo}/contents/${path}`;
@@ -182,7 +213,10 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }),
     });
 
-    if (!res.ok) throw new Error('Push hatası.');
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Push hatası.');
+    }
   }, [config, githubToken]);
 
   return (
