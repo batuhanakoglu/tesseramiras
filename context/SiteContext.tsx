@@ -39,27 +39,34 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return localStorage.getItem('tessera_secure_token') || '';
   });
 
+  // Önemli: GitHub'dan veri çekme artık manuel veya sadece yerel boşsa yapılacak
   const refreshFromGitHub = useCallback(async () => {
     if (!config.githubUsername || !config.githubRepo) return;
     try {
-      // Önbelleği (cache) kırmak için timestamp ve no-store kullanıyoruz
       const url = `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/data/config.json?t=${Date.now()}`;
       const response = await fetch(url, { cache: 'no-store' });
       if (response.ok) {
         const remoteData = await response.json();
-        // Token güvenliği: Gelen veride token varsa temizle
-        if (remoteData.githubToken) delete remoteData.githubToken;
-        setConfig(prev => ({ ...remoteData }));
-        console.log("Tessera Sync: Data pulled from GitHub.");
+        // Uzaktaki mesajları yerel mesajlarla birleştir (ileti kaybını önlemek için)
+        setConfig(prev => {
+          const mergedMessages = [...(remoteData.messages || [])];
+          // Sadece uzakta olmayan yerel mesajları ekle
+          prev.messages.forEach(localMsg => {
+            if (!mergedMessages.find(m => m.id === localMsg.id)) {
+              mergedMessages.push(localMsg);
+            }
+          });
+          return { ...remoteData, messages: mergedMessages };
+        });
+        console.log("Tessera Sync: Data refreshed from Cloud.");
       }
     } catch (e) {
-      console.warn("Tessera Sync: Remote data could not be reached.");
+      console.warn("Tessera Sync: Cloud unreachable.");
     }
   }, [config.githubUsername, config.githubRepo]);
 
-  useEffect(() => {
-    refreshFromGitHub();
-  }, []);
+  // Sayfa yüklendiğinde otomatik çekme işlemini kaldırdık (üzerine yazmayı önlemek için)
+  // Sadece ilk kurulumda veri çekilebilir.
 
   useEffect(() => {
     localStorage.setItem('tessera_v2_config', JSON.stringify(config));
@@ -106,12 +113,12 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateAnnouncement = useCallback((id: string, updates: Partial<Announcement>) => {
     setConfig(prev => ({
       ...prev,
-      announcements: prev.announcements.map(a => a.id === id ? { ...a, ...updates } : a)
+      announcements: (prev.announcements || []).map(a => a.id === id ? { ...a, ...updates } : a)
     }));
   }, []);
 
   const deleteAnnouncement = useCallback((id: string) => {
-    setConfig(prev => ({ ...prev, announcements: prev.announcements.filter(a => a.id !== id) }));
+    setConfig(prev => ({ ...prev, announcements: (prev.announcements || []).filter(a => a.id !== id) }));
   }, []);
 
   const addMessage = useCallback((msgData: Omit<Message, 'id' | 'receivedAt' | 'read'>) => {
@@ -121,7 +128,10 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       receivedAt: new Date().toLocaleString('tr-TR'),
       read: false
     };
-    setConfig(prev => ({ ...prev, messages: [newMessage, ...prev.messages] }));
+    setConfig(prev => {
+      const currentMessages = prev.messages || [];
+      return { ...prev, messages: [newMessage, ...currentMessages] };
+    });
   }, []);
 
   const deleteMessage = useCallback((id: string) => {
@@ -136,7 +146,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const uploadImageToGitHub = useCallback(async (file: File): Promise<string> => {
-    if (!githubToken) throw new Error('Token eksik.');
+    if (!githubToken) throw new Error('GitHub PAT eksik. ROOT_CONFIG kısmından ekleyin.');
     const reader = new FileReader();
     const base64Promise = new Promise<string>((resolve) => {
       reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -156,26 +166,18 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }),
     });
 
-    if (!response.ok) throw new Error('Yükleme hatası.');
+    if (!response.ok) {
+      const res = await response.json();
+      throw new Error(res.message || 'Görsel yükleme hatası.');
+    }
     return `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/${path}`;
   }, [config, githubToken]);
 
   const saveToGitHub = useCallback(async () => {
     if (!githubToken) throw new Error('GitHub PAT eksik.');
 
-    // KESİN ÇÖZÜM: Gönderilen veriden ghp_ içeren her şeyi temizle
+    // Veri temizliği (GHP token asla dosyaya yazılmasın)
     const configToSave = JSON.parse(JSON.stringify(config));
-    
-    const cleanObject = (obj: any) => {
-      for (const key in obj) {
-        if (typeof obj[key] === 'string' && obj[key].includes('ghp_')) {
-          obj[key] = ""; // Token değerini boşalt
-        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-          cleanObject(obj[key]);
-        }
-      }
-    };
-    cleanObject(configToSave);
     if (configToSave.githubToken) delete configToSave.githubToken;
 
     const jsonString = JSON.stringify(configToSave, null, 2);
@@ -196,7 +198,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       method: 'PUT',
       headers: { 'Authorization': `token ${githubToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: 'Sync: Tessera Cloud Update',
+        message: 'Sync: Tessera Core State Update',
         content: jsonContent,
         sha: sha || undefined
       }),
@@ -204,7 +206,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.message || 'Push hatası.');
+      throw new Error(err.message || 'GitHub Push hatası.');
     }
   }, [config, githubToken]);
 
