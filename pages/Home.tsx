@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useSite } from '../context/SiteContext';
 import { Link } from 'react-router-dom';
 import { ContactForm } from '../components/ContactForm';
@@ -8,6 +8,35 @@ export const Home: React.FC = () => {
   const { config } = useSite();
   const latestPost = config.posts.length > 0 ? config.posts[0] : null;
   const activeAnnouncements = config.announcements?.filter(a => a.isActive) || [];
+  
+  // Slider için sürükleme mantığı
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDown, setIsDown] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    setIsDown(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDown(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDown(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDown || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Kaydırma hızı katsayısı
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
 
   return (
     <div className="bg-black">
@@ -31,7 +60,7 @@ export const Home: React.FC = () => {
             <p className="text-lg md:text-2xl text-white/40 leading-tight font-light border-l border-accent pl-6 md:pl-10 mb-10 md:mb-12 italic">
               {config.heroSubtext}
             </p>
-            <Link to="/archive" className="group relative inline-block text-[9px] md:text-[10px] font-black tracking-[0.5em] border border-accent/30 px-8 md:px-10 py-4 md:py-5 hover:border-accent transition-all uppercase">
+            <Link to="/archive" className="group relative inline-block text-[9px] md:text-[10px] font-black tracking-[0.5em] border border-accent/30 px-8 md:px-10 py-4 md:py-5 hover:border-accent transition-all uppercase no-underline">
               <span className="relative z-10 group-hover:text-white transition-colors text-white">DİZİNE GİRİŞ ↓</span>
               <div className="absolute inset-0 bg-accent scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500"></div>
             </Link>
@@ -39,40 +68,60 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Announcements Section */}
+      {/* Announcements Slider Section */}
       {activeAnnouncements.length > 0 && (
-        <section className="border-b border-white/5 overflow-hidden">
+        <section className="border-b border-white/5 overflow-hidden bg-[#050505]">
           {/* Ticker */}
-          <div className="bg-accent/10 border-b border-white/5 py-3 md:py-4 overflow-hidden whitespace-nowrap">
-            <div className="inline-block animate-[marquee_30s_linear_infinite] text-mono text-[8px] md:text-[9px] font-black tracking-[0.3em] uppercase text-accent">
-              {[...Array(10)].map((_, i) => (
+          <div className="bg-accent/5 border-b border-white/5 py-3 md:py-4 overflow-hidden whitespace-nowrap">
+            <div className="inline-block animate-[marquee_40s_linear_infinite] text-mono text-[8px] md:text-[9px] font-black tracking-[0.3em] uppercase text-accent/60">
+              {[...Array(15)].map((_, i) => (
                 <span key={i} className="mx-6 md:mx-10">
-                  {activeAnnouncements[0].title} // {activeAnnouncements[0].date} // PROTOCOL_UPDATE
+                  {activeAnnouncements[0].title} // {activeAnnouncements[0].date} // LIVE_FEED
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Announcement Cards */}
           <div className="px-6 md:px-10 py-16 md:py-24 max-w-screen-2xl mx-auto">
-             <div className="flex items-baseline gap-10 mb-10 md:mb-16">
-                <div className="text-mono text-[9px] md:text-[10px] font-bold tracking-[0.5em] text-accent uppercase italic">NEWS_FEED // UPDATES</div>
+             <div className="flex justify-between items-end mb-12 md:mb-16">
+                <div>
+                  <div className="text-mono text-[9px] md:text-[10px] font-bold tracking-[0.5em] text-accent uppercase italic mb-2">NEWS_STREAM // DISPATCH</div>
+                  <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic">GÜNCEL_DUYURULAR.</h2>
+                </div>
+                <div className="hidden md:block text-mono text-[9px] opacity-20 uppercase tracking-widest">
+                  HOLD_AND_DRAG_TO_EXPLORE →
+                </div>
              </div>
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+
+             {/* Draggable Slider Container */}
+             <div 
+                ref={scrollRef}
+                onMouseDown={handleMouseDown}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={handleMouseUp}
+                onMouseMove={handleMouseMove}
+                className={`flex gap-6 md:gap-10 overflow-x-auto cursor-grab active:cursor-grabbing pb-10 scrollbar-hide select-none snap-x snap-mandatory`}
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+             >
                 {activeAnnouncements.map((ann) => (
-                  <div key={ann.id} className="group relative border border-white/5 bg-white/5 overflow-hidden hover:border-accent/40 transition-all duration-700 animate-entry">
+                  <div 
+                    key={ann.id} 
+                    className="flex-shrink-0 w-[85vw] md:w-[60vw] lg:w-[40vw] group relative border border-white/5 bg-white/5 overflow-hidden hover:border-accent/40 transition-all duration-700 snap-center"
+                  >
                     <div className="flex flex-col md:flex-row h-full">
-                      <div className="w-full md:w-1/3 aspect-[4/3] md:aspect-square overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-1000">
-                        <img src={ann.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3s]" alt={ann.title} />
+                      <div className="w-full md:w-2/5 aspect-[4/3] md:aspect-auto overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-1000">
+                        <img src={ann.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[4s]" alt={ann.title} draggable="false" />
                       </div>
-                      <div className="w-full md:w-2/3 p-6 md:p-10 flex flex-col justify-between">
+                      <div className="w-full md:w-3/5 p-6 md:p-10 flex flex-col justify-between">
                         <div>
-                          <span className="text-mono text-[8px] text-accent font-bold tracking-widest uppercase mb-3 md:mb-4 block">[{ann.date}]</span>
-                          <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight mb-3 md:mb-4 group-hover:text-accent transition-colors">{ann.title}</h3>
-                          <p className="text-sm text-white/40 italic font-light leading-relaxed">{ann.content}</p>
+                          <span className="text-mono text-[8px] text-accent font-bold tracking-widest uppercase mb-4 block">[{ann.date}]</span>
+                          <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-accent transition-colors leading-tight">{ann.title}</h3>
+                          <p className="text-sm text-white/40 italic font-light leading-relaxed line-clamp-4">{ann.content}</p>
                         </div>
-                        <div className="mt-6 md:mt-8">
-                           <div className="h-px w-0 group-hover:w-full bg-accent transition-all duration-700"></div>
+                        <div className="mt-8">
+                           <div className="h-[1px] w-full bg-white/5 relative">
+                              <div className="absolute inset-0 bg-accent scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-700"></div>
+                           </div>
                         </div>
                       </div>
                     </div>
@@ -87,7 +136,7 @@ export const Home: React.FC = () => {
       {latestPost && (
         <section className="px-6 md:px-10 py-16 md:py-32 max-w-screen-2xl mx-auto border-b border-white/5">
           <div className="text-mono text-[9px] md:text-[10px] font-bold tracking-[0.5em] text-accent uppercase mb-10 md:mb-16 italic">FEATURED_LOG // 01</div>
-          <Link to={`/post/${latestPost.id}`} className="group block relative">
+          <Link to={`/post/${latestPost.id}`} className="group block relative no-underline">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 md:gap-20 items-center">
               <div className="lg:col-span-7 aspect-[16/9] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-1000 border border-white/10 relative">
                 <img src={latestPost.imageUrl} alt={latestPost.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[2s]" />
@@ -139,6 +188,9 @@ export const Home: React.FC = () => {
         @keyframes marquee {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </div>
