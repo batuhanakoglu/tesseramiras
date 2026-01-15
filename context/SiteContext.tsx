@@ -18,6 +18,7 @@ interface SiteContextType {
   markAsRead: (id: string) => void;
   saveToGitHub: () => Promise<void>;
   uploadImageToGitHub: (file: File) => Promise<string>;
+  refreshFromGitHub: () => Promise<void>;
 }
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
@@ -29,12 +30,10 @@ const toBase64 = (str: string) => {
 };
 
 export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Config ve Token'ı ayrı yerlerde saklıyoruz
   const [config, setConfig] = useState<SiteConfig>(() => {
     const saved = localStorage.getItem('tessera_v2_config');
     const parsed = saved ? JSON.parse(saved) : INITIAL_CONFIG;
-    if (!parsed.announcements) parsed.announcements = INITIAL_CONFIG.announcements || [];
-    // Güvenlik: Config içinden token'ı temizle (varsa)
+    // Güvenlik: Asla config içinde ghp_ token barındırma
     if (parsed.githubToken) delete parsed.githubToken;
     return parsed;
   });
@@ -42,6 +41,38 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [githubToken, setGithubTokenState] = useState<string>(() => {
     return localStorage.getItem('tessera_secure_token') || '';
   });
+
+  // Uzaktaki veriyi çekme fonksiyonu
+  const refreshFromGitHub = useCallback(async () => {
+    if (!config.githubUsername || !config.githubRepo) return;
+    
+    try {
+      // Cache'i atlamak için timestamp ekliyoruz
+      const url = `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/data/config.json?t=${Date.now()}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const remoteConfig = await response.json();
+        // Güvenlik: Gelen veride token varsa temizle
+        if (remoteConfig.githubToken) delete remoteConfig.githubToken;
+        
+        setConfig(prev => ({
+          ...remoteConfig,
+          // Lokal ayarları koru (Token ve kullanıcı bilgileri gibi)
+          githubUsername: prev.githubUsername,
+          githubRepo: prev.githubRepo,
+          githubEmail: prev.githubEmail
+        }));
+        console.log("Tessera: Cloud data synchronized.");
+      }
+    } catch (error) {
+      console.error("Tessera Sync Error:", error);
+    }
+  }, [config.githubUsername, config.githubRepo]);
+
+  // Uygulama açıldığında veriyi çek
+  useEffect(() => {
+    refreshFromGitHub();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('tessera_v2_config', JSON.stringify(config));
@@ -55,7 +86,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateConfig = useCallback((updates: Partial<SiteConfig>) => {
     setConfig(prev => {
       const newConfig = { ...prev, ...updates };
-      if ('githubToken' in newConfig) delete (newConfig as any).githubToken;
+      if ((newConfig as any).githubToken) delete (newConfig as any).githubToken;
       return newConfig;
     });
   }, []);
@@ -153,9 +184,15 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveToGitHub = useCallback(async () => {
     if (!githubToken) throw new Error('Token eksik! ROOT_CONFIG altından PAT tanımlayın.');
 
-    // KESİN ÇÖZÜM: Gönderilen JSON içinden githubToken anahtarını siliyoruz.
+    // KESİN ÇÖZÜM: Gönderilen JSON içinden tüm hassas verileri temizle
     const configToSave = JSON.parse(JSON.stringify(config));
     delete configToSave.githubToken;
+    // Ekstra güvenlik: Eğer bir şekilde ghp_ içeren bir string kaldıysa onu da temizleyelim
+    Object.keys(configToSave).forEach(key => {
+      if (typeof configToSave[key] === 'string' && configToSave[key].startsWith('ghp_')) {
+        configToSave[key] = "";
+      }
+    });
     
     const jsonString = JSON.stringify(configToSave, null, 2);
     const jsonContent = toBase64(jsonString);
@@ -196,7 +233,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <SiteContext.Provider value={{ 
       config, githubToken, setGithubToken, updateConfig, addPost, updatePost, deletePost, 
       addAnnouncement, updateAnnouncement, deleteAnnouncement, 
-      addMessage, deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub 
+      addMessage, deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub, refreshFromGitHub
     }}>
       {children}
     </SiteContext.Provider>
