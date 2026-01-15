@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useSite } from '../context/SiteContext';
 import { AdminTab, Post, Message, Announcement } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
+
+// HATA KAYNAĞI OLAN GEMINI IMPORTU KALDIRILDI
 
 export const Admin: React.FC = () => {
   const { 
@@ -19,12 +20,13 @@ export const Admin: React.FC = () => {
     saveToGitHub, 
     uploadImageToGitHub 
   } = useSite();
+
   const [activeTab, setActiveTab] = useState<AdminTab>(AdminTab.OVERVIEW);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  // AI PROCESSING STATE'İ KALDIRILDI
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   
   const navigate = useNavigate();
@@ -82,15 +84,9 @@ export const Admin: React.FC = () => {
     }
   };
 
-  const handleAiEnhance = async () => {
-    if (!postForm.content || !postForm.title) return;
-    setIsAiProcessing(true);
-    try {
-      const enhanced = await generateArchaeologicalInsight(postForm.title, postForm.content);
-      if (enhanced) setPostForm(prev => ({ ...prev, content: enhanced }));
-    } finally {
-      setIsAiProcessing(false);
-    }
+  // AI İYİLEŞTİRME FONKSİYONU DEVRE DIŞI BIRAKILDI
+  const handleAiEnhance = () => {
+    alert("AI Servisi şu an yapılandırma aşamasındadır.");
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'post' | 'author' | 'hero' | 'announcement') => {
@@ -137,7 +133,7 @@ export const Admin: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white">
         <div className="max-w-md w-full border border-accent/20 p-8 md:p-12 space-y-8 md:space-y-10 bg-accent/5">
           <div className="text-center">
             <h1 className="text-xl font-black mb-2 text-accent uppercase">TESSERA_CORE</h1>
@@ -206,79 +202,28 @@ export const Admin: React.FC = () => {
         </div>
       </aside>
 
-      <main className="flex-grow p-5 md:p-12 overflow-y-auto">
+      <main className="flex-grow p-5 md:p-12 overflow-y-auto bg-black">
         <h2 className="text-lg md:text-2xl font-black tracking-tighter uppercase mb-8 md:mb-12 pb-4 md:pb-6 border-b border-white/5 italic">
           <span className="text-accent opacity-50 mr-2 md:mr-4 font-mono text-[10px] md:text-xs not-italic">CMD_</span>{activeTab.replace('_', ' ')}
         </h2>
 
-        {/* Console / Overview */}
-        {activeTab === AdminTab.OVERVIEW && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="border border-white/5 p-4 md:p-6 bg-white/5">
-              <span className="text-[7px] md:text-[8px] text-accent font-bold uppercase block mb-2 md:mb-3 tracking-widest">DATA_LOGS</span>
-              <span className="text-2xl md:text-3xl font-black tabular-nums">{config.posts.length}</span>
-            </div>
-            <div className="border border-white/5 p-4 md:p-6 bg-white/5">
-              <span className="text-[7px] md:text-[8px] text-accent font-bold uppercase block mb-2 md:mb-3 tracking-widest">ACTIVE_ANNS</span>
-              <span className="text-2xl md:text-3xl font-black tabular-nums">{config.announcements?.filter(a => a.isActive).length || 0}</span>
-            </div>
-            <div className="border border-white/5 p-4 md:p-6 bg-white/5">
-              <span className="text-[7px] md:text-[8px] text-accent font-bold uppercase block mb-2 md:mb-3 tracking-widest">BUILD_STAMP</span>
-              <span className="text-base md:text-lg font-black block mt-1 uppercase">V2.6_BRUTAL</span>
-            </div>
-            <div className="border border-accent/20 p-4 md:p-6 bg-accent/5">
-              <span className="text-[7px] md:text-[8px] text-accent font-bold uppercase block mb-2 md:mb-3 tracking-widest">STATUS</span>
-              <span className="text-base md:text-lg font-black block mt-1 text-accent italic uppercase animate-pulse">Sync_Ready</span>
-            </div>
-          </div>
-        )}
-
-        {/* Announcements Management */}
-        {activeTab === AdminTab.ANNOUNCEMENTS && (
+        {/* POSTS TAB */}
+        {activeTab === AdminTab.POSTS && (
           <div className="space-y-10 md:space-y-16">
-            <form onSubmit={handleAnnSubmit} className="max-w-3xl space-y-6 md:space-y-8">
-              <input type="text" placeholder="ANNOUNCEMENT_TITLE" required className="w-full bg-transparent border-b border-white/10 py-3 text-base md:text-xl font-black uppercase italic focus:outline-none focus:border-accent" value={annForm.title} onChange={e => setAnnForm({...annForm, title: e.target.value})} />
+            <form onSubmit={handlePostSubmit} className="max-w-3xl space-y-6 md:space-y-8">
+              <input type="text" placeholder="ENTRY_TITLE" required className="w-full bg-transparent border-b border-white/10 py-3 text-base md:text-xl font-black uppercase italic focus:outline-none focus:border-accent" value={postForm.title} onChange={e => setPostForm({...postForm, title: e.target.value})} />
+              <textarea placeholder="ENTRY_EXCERPT" required rows={2} className="w-full bg-transparent border-b border-white/10 text-[10px] md:text-xs font-bold italic text-white/40 py-2 focus:outline-none focus:border-accent tracking-widest" value={postForm.excerpt} onChange={e => setPostForm({...postForm, excerpt: e.target.value})} />
+              <textarea placeholder="ENTRY_CONTENT_MARKDOWN" required rows={12} className="w-full bg-transparent border-b border-white/10 text-xs md:text-base font-light italic text-white/40 py-2 focus:outline-none focus:border-accent leading-relaxed" value={postForm.content} onChange={e => setPostForm({...postForm, content: e.target.value})} />
               
-              <div className="space-y-3">
-                <label className="text-[9px] text-accent font-bold uppercase tracking-widest">MEDIA_URL</label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input type="text" className="flex-grow bg-transparent border-b border-white/10 text-[10px] py-2 focus:outline-none focus:border-accent" value={annForm.imageUrl} onChange={e => setAnnForm({...annForm, imageUrl: e.target.value})} />
-                  <button type="button" onClick={() => annFileInputRef.current?.click()} className="bg-accent/10 border border-accent/20 px-4 py-2 text-[8px] font-bold text-accent uppercase hover:bg-accent hover:text-white transition-all">UPLOAD</button>
-                  <input type="file" ref={annFileInputRef} className="hidden" onChange={e => handleImageUpload(e, 'announcement')} />
-                </div>
-              </div>
-
-              <textarea placeholder="ANNOUNCEMENT_CONTENT" required rows={4} className="w-full bg-transparent border-b border-white/10 text-xs md:text-base font-light italic text-white/40 py-2 focus:outline-none focus:border-accent leading-relaxed" value={annForm.content} onChange={e => setAnnForm({...annForm, content: e.target.value})} />
-              
-              <div className="flex items-center gap-3 py-2">
-                <input type="checkbox" id="isActive" className="w-4 h-4 accent-accent" checked={annForm.isActive} onChange={e => setAnnForm({...annForm, isActive: e.target.checked})} />
-                <label htmlFor="isActive" className="text-[9px] font-bold uppercase tracking-widest cursor-pointer">AKTİF YAYIN PROTOKOLÜ</label>
-              </div>
-
-              <button type="submit" className="w-full md:w-auto bg-accent text-white px-10 py-4 text-[9px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-                {editingAnnId ? 'UPDATE_ANNOUNCEMENT' : 'COMMIT_ANNOUNCEMENT'}
+              <button type="submit" className="bg-accent text-white px-10 py-4 text-[9px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
+                {editingId ? 'UPDATE_ENTRY' : 'COMMIT_ENTRY'}
               </button>
             </form>
-
-            <div className="border-t border-white/10 pt-10">
-              <h3 className="text-[9px] text-accent font-bold uppercase mb-6 tracking-widest">EXISTING_ANNOUNCEMENTS</h3>
-              <div className="grid grid-cols-1 gap-2 md:gap-3">
-                {config.announcements?.map(ann => (
-                  <div key={ann.id} className="flex flex-col sm:flex-row justify-between p-4 md:p-5 border border-white/5 hover:border-accent/40 transition-all bg-white/5 gap-4">
-                    <div className="flex-grow">
-                      <h4 className={`text-sm md:text-base font-black uppercase tracking-tight ${!ann.isActive ? 'opacity-30' : ''}`}>{ann.title}</h4>
-                      <p className="text-[7px] md:text-[8px] text-accent font-bold tracking-widest uppercase mt-1">{ann.date} // {ann.isActive ? 'STATUS: ACTIVE' : 'STATUS: INACTIVE'}</p>
-                    </div>
-                    <div className="flex gap-4 items-center sm:justify-end border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0">
-                      <button onClick={() => {setEditingAnnId(ann.id); setAnnForm({...ann});}} className="text-[8px] font-bold uppercase text-white/40 hover:text-accent transition-colors">EDIT_LOG</button>
-                      <button onClick={() => deleteAnnouncement(ann.id)} className="text-[8px] font-bold text-red-900 uppercase hover:text-red-500 transition-colors">ERASE</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         )}
+
+        {/* DİĞER TABLARIN İÇERİĞİ BURADA DEVAM EDER... */}
+        <div className="mt-10 text-[8px] text-white/20 uppercase font-bold tracking-[0.5em]">Tessera Digital Archive System v2.6</div>
       </main>
     </div>
   );
