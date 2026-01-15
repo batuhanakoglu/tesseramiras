@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="tr" style="color-scheme: dark;">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TESSERA | Dijital Arşiv</title>
+    
+    <!-- UI Kütüphaneleri & Fontlar -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                accent: '#D1512D', // Deep Terracotta
+              },
+              fontFamily: {
+                mono: ['"JetBrains Mono"', 'monospace'],
+                sans: ['"Space Grotesk"', 'sans-serif'],
+                serif: ['"Playfair Display"', 'serif'],
+              }
+            }
+          }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+    
+    <style>
+        :root { 
+            --bg: #000000; 
+            --accent: #D1512D;
+            color-scheme: dark !important;
+        }
+        
+        @media (min-width: 1024px) {
+            * { cursor: none !important; }
+            .custom-cursor, .custom-cursor-outline { display: block; }
+        }
+        
+        @media (max-width: 1023px) {
+            .custom-cursor, .custom-cursor-outline { display: none !important; }
+        }
+        
+        html, body { 
+            background-color: #000000 !important; 
+            color: #ffffff !important; 
+            margin: 0; 
+            padding: 0; 
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            touch-action: manipulation;
+        }
+        
+        #root { background-color: #000000 !important; min-height: 100vh; }
+
+        .custom-cursor { 
+            width: 8px; height: 8px; 
+            background: #ffffff; 
+            border-radius: 50%; 
+            position: fixed; pointer-events: none; z-index: 10000; 
+            transform: translate(-50%, -50%);
+            will-change: transform;
+        }
+        .custom-cursor-outline { 
+            width: 32px; height: 32px; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            border-radius: 50%; 
+            position: fixed; pointer-events: none; z-index: 9999; 
+            transform: translate(-50%, -50%);
+            will-change: transform;
+            transition: transform 0.15s ease-out;
+        }
+        
+        ::selection { background: var(--accent); color: white; }
+        html { scroll-behavior: smooth; }
+        
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-entry { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: var(--accent); }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.36.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div class="custom-cursor" id="cursor"></div>
+    <div class="custom-cursor-outline" id="cursor-outline"></div>
+    
+    <div id="root"></div>
+
+    <script type="module" src="/index.tsx"></script>
+
+    <script>
+        const cursor = document.getElementById('cursor');
+        const outline = document.getElementById('cursor-outline');
+        
+        let mouseX = 0, mouseY = 0;
+        let outlineX = 0, outlineY = 0;
+
+        if (window.matchMedia("(min-width: 1024px)").matches) {
+            window.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                if (cursor) {
+                    cursor.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
+                }
+            });
+
+            function animate() {
+                outlineX += (mouseX - outlineX) * 0.15;
+                outlineY += (mouseY - outlineY) * 0.15;
+                if (outline) {
+                    outline.style.transform = `translate(${outlineX}px, ${outlineY}px) translate(-50%, -50%)`;
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+    </script>
+</body>
+</html>

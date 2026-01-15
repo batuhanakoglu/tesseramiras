@@ -1,0 +1,61 @@
+
+import { SiteConfig } from './types';
+
+export const INITIAL_CONFIG: SiteConfig = {
+  siteTitle: 'TESSERA | MİRAS',
+  accentColor: '#FFFFFF',
+  fontFamily: 'Space Grotesk',
+  heroText: 'İnsanlık Tarihinin Dijital Muhafazası.',
+  heroSubtext: 'Klasik arkeoloji, yüksek hassasiyetli restorasyon ve müzeciliğin dijital geleceğinin kesişim noktalarını keşfediyoruz.',
+  heroImageUrl: 'https://images.unsplash.com/photo-1448381439543-132d0bc9ab48?q=80&w=2070&auto=format&fit=crop',
+  authorName: 'Batuhan Akoğlu',
+  authorTitle: 'Dijital Arkeolog & Küratör',
+  authorBio: 'Geçmişin analog izlerini dijital geleceğe taşımayı misyon edinmiş bir araştırmacı. Kültürel mirasın korunması, restorasyon teknolojileri ve müzecilikte dijital dönüşüm üzerine çalışıyorum. Tessera, bu yolculuğun verilerini sakladığım açık bir arşivi temsil ediyor.',
+  authorImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop',
+  authorPhilosophy: "Kültürel mirası sadece korumak yetmez, onu dijitalin sonsuzluğunda yeniden tanımlamalıyız.",
+  focusAreas: [
+    { id: '01', title: 'DİJİTAL ARKEOLOJİ', desc: 'LiDAR, fotogrametri and 3D tarama yöntemleriyle saha verilerinin yüksek çözünürlüklü dijital ikizlerinin oluşturulması.' },
+    { id: '02', title: 'SANAL RESTORASYON', desc: 'Tahrip olmuş eserlerin tarihsel doğruluk payıyla AI ve procedural modelleme kullanılarak dijital rekonstrüksiyonu.' },
+    { id: '03', title: 'KÜRATÖRYEL TEKNOLOJİ', desc: 'Fiziksel müzelerin metaverse ve sarmal ortamlara (immersive) entegrasyonu ve dijital sergileme stratejileri.' }
+  ],
+  githubUsername: 'batuhanakoglu',
+  githubEmail: '',
+  githubToken: '',
+  githubRepo: 'tessera',
+  githubImagePath: 'assets/archive',
+  githubProjects: [],
+  socialLinks: {
+    instagram: 'https://instagram.com/batuhanakoglu',
+    linkedin: 'https://www.linkedin.com/in/batuhan-akoğlu-924a1224b'
+  },
+  posts: [
+    {
+      id: '1',
+      title: 'Yeraltını Dijitalleştirmek: Modern Arkeolojide LiDAR',
+      excerpt: 'Işık tespiti ve uzaklık tayini teknolojisinin, yoğun bitki örtüsü altına gizlenmiş kayıp medeniyetleri nasıl gün yüzüne çıkardığı üzerine.',
+      content: 'LiDAR teknolojisinin kullanımı, arkeolojik alanları haritalandırma biçimimizi kökten değiştirdi. Hava verilerinden orman örtüsünü sıyırarak, daha önce çıplak gözle görülmesi imkansız olan devasa kentsel ağları keşfediyoruz.',
+      imageUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+      date: '20 MAYIS 2024',
+      category: 'ARKEOLOJİ',
+      readingTime: '7 DK'
+    }
+  ],
+  announcements: [
+    {
+      id: 'a1',
+      title: 'TESSERA v2.6 SİSTEM GÜNCELLEMESİ',
+      content: 'Arşiv altyapısı Terracotta Protokolü ile modernize edildi. Artık tüm veriler yüksek hassasiyetli görselleştirme desteğine sahip.',
+      imageUrl: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop',
+      date: '1 MART 2024',
+      isActive: true
+    }
+  ],
+  messages: []
+};
+
+export const FONTS_MAP: Record<string, string> = {
+  'Inter': '"Inter", sans-serif',
+  'Space Grotesk': '"Space Grotesk", sans-serif',
+  'JetBrains Mono': '"JetBrains Mono", monospace',
+  'Playfair Display': '"Playfair Display", serif'
+};
