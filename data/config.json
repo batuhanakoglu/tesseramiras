@@ -2,8 +2,8 @@
   "siteTitle": "TESSERA | MİRAS",
   "accentColor": "#FFFFFF",
   "fontFamily": "Space Grotesk",
-  "heroText": "değişti",
-  "heroSubtext": "Klasik arkeoloji, yüksek hassasiyetli restorasyon ve müzeciliğin dijital geleceğinin kesişim noktalarını keşfediyoruz. yağız ağla",
+  "heroText": "İnsanlığın kültür ayak izine doğru bir yolculuk.",
+  "heroSubtext": "Klasik arkeoloji, yüksek hassasiyetli restorasyon ve müzeciliğin dijital geleceğinin kesişim noktalarını keşfediyoruz. ",
   "heroImageUrl": "https://www.ephesusturkey.com/wp-content/uploads/2015/01/Celcus-library-620x350.jpg",
   "authorName": "Batuhan Akoğlu",
   "authorTitle": "Sanat Tarihçisi",
@@ -38,16 +38,6 @@
   },
   "posts": [
     {
-      "title": "nonni",
-      "excerpt": "aganinigigiseig",
-      "content": "şlwk4gşlskgrşlksrşglksrşklg",
-      "imageUrl": "https://raw.githubusercontent.com/batuhanakoglu/tesseramiras/main/assets/archive/1768484526231-768_576.jpg",
-      "category": "SANAT TARİHİ",
-      "readingTime": "5 DK",
-      "id": "4jf0nhksf",
-      "date": "15 OCAK 2026"
-    },
-    {
       "id": "1",
       "title": "Yeraltını Dijitalleştirmek: Modern Arkeolojide LiDAR",
       "excerpt": "Işık tespiti ve uzaklık tayini teknolojisinin, yoğun bitki örtüsü altına gizlenmiş kayıp medeniyetleri nasıl gün yüzüne çıkardığı üzerine.",
@@ -60,30 +50,6 @@
   ],
   "messages": [],
   "announcements": [
-    {
-      "title": "seşgseşgk",
-      "content": "sşlegksşelgkseg",
-      "imageUrl": "",
-      "isActive": true,
-      "id": "npuhg7nh7",
-      "date": "15 OCAK 2026"
-    },
-    {
-      "title": "yağız gay mi?",
-      "content": "buralarda şaapmışlar",
-      "imageUrl": "https://raw.githubusercontent.com/batuhanakoglu/tesseramiras/main/assets/archive/1768485076342-Luigi-Storari-Smyrne-Plan-.jpg",
-      "isActive": true,
-      "id": "axq639x8k",
-      "date": "15 OCAK 2026"
-    },
-    {
-      "title": "Yağız bir göttür ",
-      "content": "evet bu bir gerçek",
-      "imageUrl": "",
-      "isActive": true,
-      "id": "x7qdohwee",
-      "date": "15 OCAK 2026"
-    },
     {
       "id": "a1",
       "title": "TESSERA v2.6 SİSTEM GÜNCELLEMESİ",
