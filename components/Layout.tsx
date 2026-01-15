@@ -54,7 +54,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const currentFontFamily = FONTS_MAP[config.fontFamily] || 'sans-serif';
-    document.documentElement.style.setProperty('--main-font', currentFontFamily);
+    // Update the CSS variable used by Tailwind sans font
+    document.documentElement.style.setProperty('--font-sans', currentFontFamily);
   }, [config.fontFamily]);
 
   const handleLogoClick = (e: React.MouseEvent) => {
@@ -72,7 +73,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   };
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-accent selection:text-white transition-all duration-300 overflow-x-hidden">
+    <div className="min-h-screen bg-black text-white selection:bg-accent selection:text-white transition-all duration-300 overflow-x-hidden font-sans">
       {!isAdminPage && (
         <nav 
           ref={navRef}
@@ -82,7 +83,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <Link 
             to="/"
             onClick={handleLogoClick}
-            className="flex items-center px-4 md:px-10 border-r border-white/5 group relative cursor-pointer decoration-none text-white overflow-hidden shrink-0"
+            className="flex items-center px-4 md:px-10 border-r border-white/5 group relative cursor-pointer no-underline text-white overflow-hidden shrink-0"
           >
             <div className="text-xs md:text-xl font-black tracking-tighter z-10 uppercase transition-colors group-hover:text-black whitespace-nowrap">
               {config.siteTitle}
@@ -118,7 +119,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                       to={`/category/${cat.slug}`}
                       onMouseEnter={() => setActiveHoverCategory(cat.name)}
                       onClick={() => setIsTopicsOpen(false)}
-                      className={`px-6 py-4 md:py-5 text-[9px] md:text-[10px] text-mono font-bold tracking-[0.3em] border-b border-white/5 cursor-pointer transition-all duration-300 uppercase flex justify-between items-center group/cat-item decoration-none ${
+                      className={`px-6 py-4 md:py-5 text-[9px] md:text-[10px] text-mono font-bold tracking-[0.3em] border-b border-white/5 cursor-pointer transition-all duration-300 uppercase flex justify-between items-center group/cat-item no-underline ${
                         activeHoverCategory === cat.name ? 'text-accent bg-accent/5' : 'text-white/40 hover:text-white hover:bg-white/5'
                       }`}
                     >
@@ -129,7 +130,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   <Link
                     to="/archive"
                     onClick={() => setIsTopicsOpen(false)}
-                    className="mt-auto px-6 py-5 text-[9px] text-mono font-bold tracking-[0.3em] hover:bg-accent hover:text-white transition-all duration-300 uppercase text-center border-t border-white/5 decoration-none text-accent"
+                    className="mt-auto px-6 py-5 text-[9px] text-mono font-bold tracking-[0.3em] hover:bg-accent hover:text-white transition-all duration-300 uppercase text-center border-t border-white/5 no-underline text-accent"
                   >
                     TÜM ARŞİVİ GÖR →
                   </Link>
@@ -151,7 +152,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                             to={`/post/${post.id}`} 
                             key={post.id} 
                             onClick={() => setIsTopicsOpen(false)}
-                            className="group/post-item flex items-center justify-between py-4 transition-all decoration-none"
+                            className="group/post-item flex items-center justify-between py-4 transition-all no-underline"
                           >
                             <div className="flex-grow">
                               <h5 className="text-[14px] font-black tracking-tighter uppercase group-hover/post-item:text-accent transition-all text-white/70">
@@ -178,7 +179,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {/* MÜELLİF LINK */}
             <Link 
               to="/author" 
-              className="flex items-center px-4 md:px-10 text-[8px] md:text-[10px] text-mono font-bold tracking-[0.2em] md:tracking-[0.4em] text-white/60 hover:text-accent transition-colors uppercase whitespace-nowrap"
+              className="flex items-center px-4 md:px-10 text-[8px] md:text-[10px] text-mono font-bold tracking-[0.2em] md:tracking-[0.4em] text-white/60 hover:text-accent transition-colors uppercase whitespace-nowrap no-underline"
             >
               MÜELLİF
             </Link>
@@ -211,16 +212,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <div className="flex flex-wrap gap-12 md:gap-20">
               <div className="space-y-4">
                 <span className="text-mono text-[9px] text-accent font-bold tracking-widest uppercase">Navigasyon</span>
-                <ul className="space-y-2 text-[10px] font-bold tracking-widest text-white/60">
-                  <li><Link to="/archive" className="hover:text-accent transition-colors uppercase">ARŞİV DİZİNİ</Link></li>
-                  <li><Link to="/author" className="hover:text-accent transition-colors uppercase">MÜELLİF HAKKINDA</Link></li>
+                <ul className="space-y-2 text-[10px] font-bold tracking-widest text-white/60 list-none p-0">
+                  <li><Link to="/archive" className="hover:text-accent transition-colors uppercase no-underline">ARŞİV DİZİNİ</Link></li>
+                  <li><Link to="/author" className="hover:text-accent transition-colors uppercase no-underline">MÜELLİF HAKKINDA</Link></li>
                 </ul>
               </div>
               <div className="space-y-4">
                 <span className="text-mono text-[9px] text-accent font-bold tracking-widest uppercase">Sosyal Kanallar</span>
-                <ul className="space-y-2 text-[10px] font-bold tracking-widest text-white/60">
-                  <li><a href={config.socialLinks.instagram} target="_blank" className="hover:text-accent transition-colors uppercase">INSTAGRAM</a></li>
-                  <li><a href={config.socialLinks.linkedin} target="_blank" className="hover:text-accent transition-colors uppercase">LINKEDIN</a></li>
+                <ul className="space-y-2 text-[10px] font-bold tracking-widest text-white/60 list-none p-0">
+                  <li><a href={config.socialLinks.instagram} target="_blank" className="hover:text-accent transition-colors uppercase no-underline">INSTAGRAM</a></li>
+                  <li><a href={config.socialLinks.linkedin} target="_blank" className="hover:text-accent transition-colors uppercase no-underline">LINKEDIN</a></li>
                 </ul>
               </div>
             </div>
