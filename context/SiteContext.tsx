@@ -4,6 +4,8 @@ import { INITIAL_CONFIG } from '../constants';
 
 interface SiteContextType {
   config: SiteConfig;
+  githubToken: string;
+  setGithubToken: (token: string) => void;
   updateConfig: (updates: Partial<SiteConfig>) => void;
   addPost: (post: Omit<Post, 'id' | 'date'>) => void;
   updatePost: (id: string, updates: Partial<Post>) => void;
@@ -20,7 +22,6 @@ interface SiteContextType {
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
 
-// Unicode destekli Base64 kodlayıcı
 const toBase64 = (str: string) => {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
     return String.fromCharCode(parseInt(p1, 16));
@@ -28,20 +29,35 @@ const toBase64 = (str: string) => {
 };
 
 export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Config ve Token'ı ayrı yerlerde saklıyoruz
   const [config, setConfig] = useState<SiteConfig>(() => {
     const saved = localStorage.getItem('tessera_v2_config');
     const parsed = saved ? JSON.parse(saved) : INITIAL_CONFIG;
     if (!parsed.announcements) parsed.announcements = INITIAL_CONFIG.announcements || [];
-    if (!parsed.messages) parsed.messages = [];
+    // Güvenlik: Config içinden token'ı temizle (varsa)
+    if (parsed.githubToken) delete parsed.githubToken;
     return parsed;
+  });
+
+  const [githubToken, setGithubTokenState] = useState<string>(() => {
+    return localStorage.getItem('tessera_secure_token') || '';
   });
 
   useEffect(() => {
     localStorage.setItem('tessera_v2_config', JSON.stringify(config));
   }, [config]);
 
+  const setGithubToken = (token: string) => {
+    setGithubTokenState(token);
+    localStorage.setItem('tessera_secure_token', token);
+  };
+
   const updateConfig = useCallback((updates: Partial<SiteConfig>) => {
-    setConfig(prev => ({ ...prev, ...updates }));
+    setConfig(prev => {
+      const newConfig = { ...prev, ...updates };
+      if ('githubToken' in newConfig) delete (newConfig as any).githubToken;
+      return newConfig;
+    });
   }, []);
 
   const addPost = useCallback((postData: Omit<Post, 'id' | 'date'>) => {
@@ -106,7 +122,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const uploadImageToGitHub = useCallback(async (file: File): Promise<string> => {
-    if (!config.githubToken) throw new Error('GitHub Token Eksik');
+    if (!githubToken) throw new Error('GitHub Token Eksik');
     const reader = new FileReader();
     const base64Promise = new Promise<string>((resolve) => {
       reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -120,7 +136,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
-        'Authorization': `token ${config.githubToken}`,
+        'Authorization': `token ${githubToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -132,13 +148,15 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!response.ok) throw new Error('Görsel yüklenemedi.');
     return `https://raw.githubusercontent.com/${config.githubUsername}/${config.githubRepo}/main/${path}`;
-  }, [config]);
+  }, [config, githubToken]);
 
   const saveToGitHub = useCallback(async () => {
-    if (!config.githubToken) throw new Error('Token eksik!');
+    if (!githubToken) throw new Error('Token eksik! ROOT_CONFIG altından PAT tanımlayın.');
 
-    // KRİTİK NOKTA: Gönderilecek veriden token'ı temizle
-    const configToSave = { ...config, githubToken: "" }; 
+    // KESİN ÇÖZÜM: Gönderilen JSON içinden githubToken anahtarını siliyoruz.
+    const configToSave = JSON.parse(JSON.stringify(config));
+    delete configToSave.githubToken;
+    
     const jsonString = JSON.stringify(configToSave, null, 2);
     const jsonContent = toBase64(jsonString);
 
@@ -147,7 +165,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     let sha = '';
     try {
-      const getRes = await fetch(url, { headers: { 'Authorization': `token ${config.githubToken}` } });
+      const getRes = await fetch(url, { headers: { 'Authorization': `token ${githubToken}` } });
       if (getRes.ok) {
         const fileData = await getRes.json();
         sha = fileData.sha;
@@ -157,11 +175,11 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
-        'Authorization': `token ${config.githubToken}`,
+        'Authorization': `token ${githubToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: 'Tessera: Content Sync',
+        message: 'Tessera: Archive Synchronized',
         content: jsonContent,
         sha: sha || undefined,
         committer: { name: config.authorName, email: config.githubEmail || 'noreply@github.com' }
@@ -170,13 +188,13 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.message);
+      throw new Error(err.message || 'Push başarısız oldu.');
     }
-  }, [config]);
+  }, [config, githubToken]);
 
   return (
     <SiteContext.Provider value={{ 
-      config, updateConfig, addPost, updatePost, deletePost, 
+      config, githubToken, setGithubToken, updateConfig, addPost, updatePost, deletePost, 
       addAnnouncement, updateAnnouncement, deleteAnnouncement, 
       addMessage, deleteMessage, markAsRead, saveToGitHub, uploadImageToGitHub 
     }}>
